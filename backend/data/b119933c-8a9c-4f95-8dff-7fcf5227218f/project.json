@@ -1,0 +1,85 @@
+{
+  "id": "b119933c-8a9c-4f95-8dff-7fcf5227218f",
+  "name": "Project-Test",
+  "description": "",
+  "git": {
+    "repoUrl": "https://github.com/dinuntp/kt-platform-poc",
+    "owner": "dinuntp",
+    "repo": "kt-platform-poc",
+    "branch": "main",
+    "token": "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"
+  },
+  "jira": {
+    "url": "https://dasyamlavanya.atlassian.net",
+    "email": "dasyam.lavanya@gmail.com",
+    "token": "ATATT3xFfGF0VoNeNRPXkn-f7i1wZ2otjUh4OXV_GRe1bjmNBvxKEKns7BFc8ze_kddNvNH5R0iexQVidPo4mEPKw99J-OajALH-wyNYH1-uBbdc4_Bi0sbrPbhIXvuS87aVyYmetvqERsCajb3S0G7zdtOskbK9i9rvN3KxGPB0pmGgFa8AYsI=6C3AF21C",
+    "projectKey": "PROJ"
+  },
+  "confluence": {
+    "url": "https://dasyamlavanya.atlassian.net",
+    "email": "dasyam.lavanya@gmail.com",
+    "token": "ATATT3xFfGF0VoNeNRPXkn-f7i1wZ2otjUh4OXV_GRe1bjmNBvxKEKns7BFc8ze_kddNvNH5R0iexQVidPo4mEPKw99J-OajALH-wyNYH1-uBbdc4_Bi0sbrPbhIXvuS87aVyYmetvqERsCajb3S0G7zdtOskbK9i9rvN3KxGPB0pmGgFa8AYsI=6C3AF21C",
+    "spaceKey": "TECH"
+  },
+  "agents": [
+    {
+      "id": "641808da-34a0-493d-b406-0ecdd1a2b83c",
+      "name": "Lead Agent",
+      "type": "lead-agent",
+      "templateType": "lead-agent",
+      "customInstructions": "",
+      "configured": true,
+      "order": 0,
+      "createdAt": "2026-03-30T06:09:32.983Z",
+      "masterTemplate": "builtin:lead-agent",
+      "systemPromptTemplate": "builtin:lead-agent",
+      "userPrompt": "1774901757297",
+      "updatedAt": "2026-03-30T20:16:07.317Z"
+    },
+    {
+      "id": "55ff65da-4ce4-4afd-9955-b76d95e0e996",
+      "name": "Developer Agent",
+      "type": "developer-agent",
+      "templateType": "developer-agent",
+      "customInstructions": "",
+      "configured": true,
+      "order": 1,
+      "createdAt": "2026-03-30T06:10:00.255Z",
+      "masterTemplate": "builtin:developer-agent",
+      "systemPromptTemplate": "builtin:developer-agent",
+      "userPrompt": "",
+      "updatedAt": "2026-03-30T20:37:39.464Z"
+    },
+    {
+      "id": "11451396-6fcc-4856-8868-169f1a790cdd",
+      "name": "Tester Agent",
+      "type": "tester-agent",
+      "templateType": "tester-agent",
+      "customInstructions": "",
+      "configured": true,
+      "order": 2,
+      "createdAt": "2026-03-30T06:10:27.229Z",
+      "masterTemplate": "builtin:tester-agent",
+      "systemPromptTemplate": "builtin:tester-agent",
+      "userPrompt": "",
+      "updatedAt": "2026-03-30T20:37:54.982Z"
+    },
+    {
+      "id": "40e34c7a-3d8d-4d89-8598-1f8c33807e02",
+      "name": "Regression Test",
+      "type": "regression-agent",
+      "templateType": "regression-agent",
+      "masterTemplate": "builtin:regression-agent",
+      "systemPromptTemplate": "builtin:regression-agent",
+      "userPrompt": "",
+      "customInstructions": "",
+      "configured": true,
+      "order": 3,
+      "createdAt": "2026-03-30T20:06:10.077Z",
+      "updatedAt": "2026-03-30T20:38:00.047Z"
+    }
+  ],
+  "status": "ready",
+  "createdAt": "2026-03-30T06:08:23.330Z",
+  "updatedAt": "2026-03-30T20:38:00.047Z"
+}

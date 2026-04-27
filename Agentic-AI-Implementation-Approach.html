@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Agentic AI Squad – VDT Platform</title>
+  <style>
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f7f9fc;
+      color: #333;
+      line-height: 1.6;
+    }
+    header {
+      background: linear-gradient(90deg, #1e88e5, #42a5f5);
+      color: white;
+      padding: 24px;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 28px;
+    }
+    header p {
+      margin-top: 8px;
+      font-size: 16px;
+      opacity: 0.95;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 24px auto;
+      padding: 0 20px;
+    }
+    section {
+      background: #ffffff;
+      margin-bottom: 24px;
+      padding: 24px;
+      border-radius: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+    section h2 {
+      color: #1e88e5;
+      margin-top: 0;
+      font-size: 22px;
+    }
+    section h3 {
+      color: #fb8c00;
+      margin-bottom: 8px;
+      font-size: 18px;
+    }
+    ul {
+      margin: 8px 0 0 20px;
+    }
+    li {
+      margin-bottom: 6px;
+    }
+    .tech-box {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+      margin-top: 16px;
+    }
+    .tech {
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 16px;
+      background: #fafafa;
+    }
+    footer {
+      text-align: center;
+      font-size: 14px;
+      color: #666;
+      padding: 20px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Agentic AI Squad – VDT Platform</h1>
+  <p>AI‑Driven Virtual Delivery Team for End‑to‑End SDLC Automation</p>
+</header>
+
+<div class="container">
+
+  <section>
+    <h2>1. Overview</h2>
+    <p>
+      <strong>Agentic AI Squad – VDT Platform</strong> is a multi‑agent AI orchestration
+      system that operates as a Virtual Delivery Team, automating the complete
+      software development lifecycle (SDLC). By chaining specialized AI agents that
+      represent real engineering roles, the platform executes a business requirement
+      from Jira story to pull request with minimal human intervention.
+    </p>
+  </section>
+
+  <section>
+    <h2>2. High‑Level Implementation Approach</h2>
+    <ul>
+      <li>Story‑driven execution initiated using a Jira issue ID</li>
+      <li>Central orchestration layer controls workflow and agent sequencing</li>
+      <li>Each agent performs a focused SDLC role and passes structured context forward</li>
+      <li>Live event streaming for transparency, traceability, and audit</li>
+      <li>Automated pull request creation after successful validation</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>3. Frontend Architecture (React.js)</h2>
+    <div class="tech-box">
+      <div class="tech">
+        <h3>Technology</h3>
+        <ul>
+          <li>React.js</li>
+          <li>TypeScript</li>
+          <li>Material UI / Ant Design</li>
+          <li>WebSockets / Server‑Sent Events</li>
+        </ul>
+      </div>
+      <div class="tech">
+        <h3>Responsibilities</h3>
+        <ul>
+          <li>Workflow configuration and story trigger UI</li>
+          <li>Live agent execution timeline</li>
+          <li>Agent outputs, logs, and execution status</li>
+          <li>Human‑in‑the‑loop approvals when required</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>4. Backend Architecture (Node.js)</h2>
+    <div class="tech-box">
+      <div class="tech">
+        <h3>Technology</h3>
+        <ul>
+          <li>Node.js (Express / Fastify)</li>
+          <li>REST + WebSocket APIs</li>
+          <li>Redis (workflow state & caching)</li>
+          <li>PostgreSQL / DynamoDB</li>
+        </ul>
+      </div>
+      <div class="tech">
+        <h3>Responsibilities</h3>
+        <ul>
+          <li>Workflow orchestration and state management</li>
+          <li>Agent execution control and retries</li>
+          <li>Context assembly and validation</li>
+          <li>Enterprise tool integrations</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>5. AI Agent Orchestration (Virtual Roles)</h2>
+    <ul>
+      <li><strong>Lead Agent</strong> – Acts as technical lead and owns execution plan</li>
+      <li><strong>Developer Agent</strong> – Implements code changes</li>
+      <li><strong>Tester Agent</strong> – Validates acceptance criteria</li>
+      <li><strong>Regression Agent</strong> – Ensures system stability and safety</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>6. LLM Strategy (Pluggable Models)</h2>
+    <div class="tech-box">
+      <div class="tech">
+        <h3>Supported Models</h3>
+        <ul>
+          <li>OpenAI GPT‑4 / GPT‑4o</li>
+          <li>Anthropic Claude (Sonnet / Opus)</li>
+          <li>Google Gemini</li>
+          <li>Enterprise‑hosted LLMs</li>
+        </ul>
+      </div>
+      <div class="tech">
+        <h3>Model Usage</h3>
+        <ul>
+          <li>Role‑based model selection per agent</li>
+          <li>Cost, latency, or policy‑aware routing</li>
+          <li>Fallback and retry handling</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>7. Enterprise Integrations</h2>
+    <ul>
+      <li><strong>Jira</strong> – Business stories and acceptance criteria</li>
+      <li><strong>GitHub</strong> – Source code, commits, and pull requests</li>
+      <li><strong>Confluence</strong> – Design context and standards</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>8. Security, Governance & Observability</h2>
+    <ul>
+      <li>Role‑based access control and scoped repo permissions</li>
+      <li>Policy‑based guardrails for agent execution</li>
+      <li>Optional human approvals for high‑risk changes</li>
+      <li>Full execution logs and agent decision traceability</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>9. Business Value</h2>
+    <p>
+      Agentic AI Squad – VDT Platform compresses delivery timelines by automating
+      SDLC handoffs, enforcing consistency, and enabling scalable AI‑driven software
+      delivery with enterprise‑grade governance.
+    </p>
+  </section>
+
+</div>
+
+<footer>
+  © 2026 Agentic AI Squad – VDT Platform | Virtual Delivery Team
+</footer>
+
+</body>
+</html>
+``
