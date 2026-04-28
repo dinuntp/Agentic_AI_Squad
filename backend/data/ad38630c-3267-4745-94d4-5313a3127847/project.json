@@ -1,0 +1,81 @@
+{
+  "id": "ad38630c-3267-4745-94d4-5313a3127847",
+  "name": "Agentic-AI-Squad",
+  "description": "Agentic-AI-Squad",
+  "git": {
+    "repoUrl": "https://dfdf",
+    "owner": "dsds",
+    "repo": "ssd",
+    "branch": "main",
+    "token": "dss"
+  },
+  "jira": {
+    "url": "htss",
+    "email": "fsds",
+    "token": "fsd",
+    "projectKey": "fsds"
+  },
+  "confluence": {
+    "url": "fdfds",
+    "email": "fdsfdsa",
+    "token": "fdsfsd",
+    "spaceKey": "fdds"
+  },
+  "agents": [
+    {
+      "id": "465d1fef-1fbe-49c5-8869-775d42d28abd",
+      "name": "Lead Agent",
+      "type": "lead-agent",
+      "templateType": "lead-agent",
+      "masterTemplate": "builtin:lead-agent",
+      "systemPromptTemplate": "builtin:lead-agent",
+      "userPrompt": "",
+      "customInstructions": "",
+      "configured": true,
+      "order": 0,
+      "createdAt": "2026-04-24T19:29:23.940Z"
+    },
+    {
+      "id": "cd088ea0-bf19-42f0-a952-4cd3db21f081",
+      "name": "Developer Agent",
+      "type": "developer-agent",
+      "templateType": "developer-agent",
+      "masterTemplate": "builtin:developer-agent",
+      "systemPromptTemplate": "builtin:developer-agent",
+      "userPrompt": "",
+      "customInstructions": "",
+      "configured": true,
+      "order": 1,
+      "createdAt": "2026-04-24T19:29:35.114Z"
+    },
+    {
+      "id": "092d1284-08da-4f40-ac1c-beb7fb07e62a",
+      "name": "Tester Agent",
+      "type": "tester-agent",
+      "templateType": "tester-agent",
+      "masterTemplate": "builtin:tester-agent",
+      "systemPromptTemplate": "builtin:tester-agent",
+      "userPrompt": "",
+      "customInstructions": "",
+      "configured": true,
+      "order": 2,
+      "createdAt": "2026-04-24T19:29:44.308Z"
+    },
+    {
+      "id": "21776167-2959-459b-b695-a98e1a7bc234",
+      "name": "Regression Agent",
+      "type": "lead-agent",
+      "templateType": "lead-agent",
+      "masterTemplate": "builtin:lead-agent",
+      "systemPromptTemplate": "builtin:lead-agent",
+      "userPrompt": "",
+      "customInstructions": "",
+      "configured": true,
+      "order": 3,
+      "createdAt": "2026-04-24T19:29:57.426Z"
+    }
+  ],
+  "status": "ready",
+  "createdAt": "2026-04-24T19:28:40.652Z",
+  "updatedAt": "2026-04-24T19:29:57.426Z"
+}
