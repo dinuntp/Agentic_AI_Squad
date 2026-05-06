@@ -1,0 +1,5 @@
+# No external dependencies; uses Python standard library only.
+#
+# Development tools (not required to run the application):
+#   pytest — optional test runner
+#   Install with: pip install pytest
