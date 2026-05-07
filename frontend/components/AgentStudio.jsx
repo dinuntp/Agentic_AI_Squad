@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../AppContext.jsx';
-import { runAgent } from '../client.js';
+import { runAgent, submitClarification } from '../client.js';
 import { Btn, Spinner, getAgentMeta, statusTag } from './UI.jsx';
 
 // ─── Pipeline Status Bar ───────────────────────────────────────────────────────
@@ -212,6 +212,9 @@ export default function AgentStudio() {
   const [currentIdx, setCurrentIdx] = useState(0);
   const [allDone, setAllDone] = useState(false);
   const [globalError, setGlobalError] = useState(null);
+  const [clarification, setClarification] = useState(null); // { sessionId, questions, answers[] }
+  const [clarifySubmitting, setClarifySubmitting] = useState(false);
+  const [prInfo, setPrInfo] = useState(null); // { prNumber, prUrl, prTitle, branchName }
   const abortRef = useRef(null);
 
   const activeAgent = sortedAgents[currentIdx] || null;
@@ -237,9 +240,20 @@ export default function AgentStudio() {
       onToken: (token) => {
         setOutputs(prev => ({ ...prev, [agent.id]: (prev[agent.id] || '') + token }));
       },
+      onSessionId: (data) => {
+        // Store sessionId so the clarification submit knows which session to resolve
+        setClarification(prev => prev ? { ...prev, sessionId: data.sessionId } : null);
+        // Pre-store so it's available when clarification_needed fires right after
+        abortRef.current = { ...abortRef.current, sessionId: data.sessionId };
+      },
+      onClarificationNeeded: (data) => {
+        const sid = abortRef.current?.sessionId;
+        setClarification({ sessionId: sid, questions: data.questions, answers: data.questions.map(() => '') });
+      },
       onComplete: (data) => {
         setStepStatuses(prev => ({ ...prev, [agent.id]: 'completed' }));
         setContexts(prev => ({ ...prev, [agent.id]: data }));
+        setClarification(null);
         const nextIdx = agentIdx + 1;
         if (nextIdx < sortedAgents.length) {
           setCurrentIdx(nextIdx);
@@ -247,9 +261,13 @@ export default function AgentStudio() {
           setAllDone(true);
         }
       },
+      onPRCreated: (data) => {
+        setPrInfo(data);
+      },
       onError: (data) => {
         setStepStatuses(prev => ({ ...prev, [agent.id]: 'failed' }));
         setGlobalError(data.error || 'Agent execution failed');
+        setClarification(null);
       },
     });
   }
@@ -261,6 +279,20 @@ export default function AgentStudio() {
     setCurrentIdx(0);
     setAllDone(false);
     setGlobalError(null);
+    setPrInfo(null);
+  }
+
+  async function handleClarificationSubmit() {
+    if (!clarification?.sessionId) return;
+    setClarifySubmitting(true);
+    try {
+      await submitClarification(project.id, clarification.sessionId, clarification.answers);
+      setClarification(null);
+    } catch (err) {
+      setGlobalError(`Clarification submit failed: ${err.message}`);
+    } finally {
+      setClarifySubmitting(false);
+    }
   }
 
   if (!project) {
@@ -280,7 +312,7 @@ export default function AgentStudio() {
   }
 
   return (
-    <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
       {/* Main Content */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '28px 32px' }}>
 
@@ -403,6 +435,41 @@ export default function AgentStudio() {
           </div>
         )}
 
+        {/* PR Created Banner */}
+        {prInfo && (
+          <div style={{
+            marginBottom: 16, padding: '14px 20px', borderRadius: 8,
+            background: '#E6F4EA', border: '1px solid #82C891',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 20 }}>🔀</span>
+              <div>
+                <div style={{ fontWeight: 700, color: '#1a7f37', fontSize: 13 }}>
+                  Pull Request #{prInfo.prNumber} Created
+                </div>
+                <div style={{ fontSize: 12, color: '#2d8a4e', marginTop: 2 }}>
+                  Branch: <code style={{ background: '#c6e9ce', padding: '1px 5px', borderRadius: 4 }}>{prInfo.branchName}</code>
+                  {' · '}{prInfo.prTitle}
+                </div>
+              </div>
+            </div>
+            <a
+              href={prInfo.prUrl}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                background: '#1a7f37', color: '#fff',
+                padding: '6px 14px', borderRadius: 6,
+                fontSize: 12, fontWeight: 600, textDecoration: 'none',
+                flexShrink: 0,
+              }}
+            >
+              Review PR →
+            </a>
+          </div>
+        )}
+
         {/* Agent Cards */}
         {sortedAgents.map((agent, i) => (
           <AgentCard
@@ -484,6 +551,74 @@ export default function AgentStudio() {
           </div>
         </div>
       </div>
+
+      {/* Clarification Modal */}
+      {clarification && (
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(2px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          zIndex: 100,
+        }}>
+          <div style={{
+            background: 'var(--surface)',
+            border: '1px solid var(--accent-border)',
+            borderRadius: 'var(--radius)',
+            padding: '28px 32px',
+            width: '100%', maxWidth: 560,
+            maxHeight: '80vh', overflowY: 'auto',
+            boxShadow: '0 8px 40px rgba(0,0,0,0.4)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+              <span style={{ fontSize: 22 }}>❓</span>
+              <h2 style={{ margin: 0, fontSize: 18, color: 'var(--text)' }}>Clarification Needed</h2>
+            </div>
+            <p style={{ margin: '0 0 20px', fontSize: 13, color: 'var(--text3)', lineHeight: 1.5 }}>
+              The agent needs clarification before proceeding. Please answer the questions below.
+            </p>
+
+            {clarification.questions.map((q, i) => (
+              <div key={i} style={{ marginBottom: 18 }}>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: 13, color: 'var(--text)', marginBottom: 6 }}>
+                  {i + 1}. {q}
+                </label>
+                <textarea
+                  rows={3}
+                  value={clarification.answers[i] || ''}
+                  onChange={(e) => {
+                    const updated = [...clarification.answers];
+                    updated[i] = e.target.value;
+                    setClarification(prev => ({ ...prev, answers: updated }));
+                  }}
+                  placeholder="Your answer…"
+                  style={{
+                    width: '100%', boxSizing: 'border-box',
+                    padding: '10px 12px', borderRadius: 8,
+                    border: '1px solid var(--border)',
+                    background: 'var(--bg)', color: 'var(--text)',
+                    fontSize: 13, fontFamily: 'var(--font-sans)',
+                    resize: 'vertical', lineHeight: 1.5,
+                    outline: 'none',
+                  }}
+                />
+              </div>
+            ))}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
+              <Btn ghost small onClick={() => setClarification(null)} disabled={clarifySubmitting}>
+                Cancel
+              </Btn>
+              <Btn
+                primary small
+                onClick={handleClarificationSubmit}
+                disabled={clarifySubmitting || clarification.answers.some(a => !a.trim())}
+              >
+                {clarifySubmitting ? <><Spinner /> Submitting…</> : 'Submit Answers'}
+              </Btn>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -13,8 +13,14 @@ function buildHeaders(config) {
   };
 }
 
+function normalizeUrl(raw) {
+  if (!raw) return raw;
+  const s = raw.trim();
+  return s.startsWith('http://') || s.startsWith('https://') ? s : `https://${s}`;
+}
+
 async function jiraFetch(config, path, options = {}) {
-  const url = `${config.url.replace(/\/$/, '')}/rest/api/3${path}`;
+  const url = `${normalizeUrl(config.url).replace(/\/$/, '')}/rest/api/3${path}`;
   const res = await fetch(url, {
     ...options,
     headers: { ...buildHeaders(config), ...(options.headers || {}) }
@@ -50,7 +56,7 @@ export async function getStory(config, issueKey) {
     sprint: fields.customfield_10020?.[0]?.name || null,
     createdAt: fields.created,
     updatedAt: fields.updated,
-    url: `${config.url}/browse/${issue.key}`
+    url: `${normalizeUrl(config.url).replace(/\/$/, '')}/browse/${issue.key}`
   };
 }
 
@@ -58,33 +64,63 @@ export async function getEpic(config, epicKey) {
   return getStory(config, epicKey);
 }
 
+// Jira deprecated GET /search?jql= (HTTP 410). New endpoint: POST /search/jql
+async function jqlSearch(config, jql, maxResults = 20, fields = []) {
+  return jiraFetch(config, '/search/jql', {
+    method: 'POST',
+    body: JSON.stringify({
+      jql,
+      maxResults,
+      fields: fields.length
+        ? fields
+        : ['summary', 'status', 'issuetype', 'priority', 'assignee'],
+    }),
+  });
+}
+
 export async function getStoriesInSprint(config, projectKey, maxResults = 20) {
-  const jql = encodeURIComponent(
-    `project = "${projectKey}" AND sprint in openSprints() ORDER BY priority ASC`
-  );
-  const data = await jiraFetch(config, `/search?jql=${jql}&maxResults=${maxResults}`);
-  return data.issues?.map(issue => ({
+  const baseUrl = normalizeUrl(config.url).replace(/\/$/, '');
+
+  const mapIssues = (issues = []) => issues.map(issue => ({
     key: issue.key,
     summary: issue.fields.summary,
     type: issue.fields.issuetype?.name,
     status: issue.fields.status?.name,
     priority: issue.fields.priority?.name,
     assignee: issue.fields.assignee?.displayName,
-    url: `${config.url}/browse/${issue.key}`
-  })) || [];
+    url: `${baseUrl}/browse/${issue.key}`
+  }));
+
+  // Try active sprint first; fall back to all open issues if no sprint exists
+  try {
+    const data = await jqlSearch(
+      config,
+      `project = "${projectKey}" AND sprint in openSprints() ORDER BY priority ASC`,
+      maxResults
+    );
+    if (data.issues?.length) return mapIssues(data.issues);
+  } catch {
+    // sprint clause may not be supported — fall through
+  }
+
+  // Fallback: all non-done issues in the project
+  const data = await jqlSearch(
+    config,
+    `project = "${projectKey}" AND statusCategory != Done ORDER BY priority ASC`,
+    maxResults
+  );
+  return mapIssues(data.issues);
 }
 
 export async function searchIssues(config, jql, maxResults = 10) {
-  const data = await jiraFetch(
-    config,
-    `/search?jql=${encodeURIComponent(jql)}&maxResults=${maxResults}`
-  );
+  const data = await jqlSearch(config, jql, maxResults);
+  const baseUrl = normalizeUrl(config.url).replace(/\/$/, '');
   return data.issues?.map(issue => ({
     key: issue.key,
     summary: issue.fields.summary,
     type: issue.fields.issuetype?.name,
     status: issue.fields.status?.name,
-    url: `${config.url}/browse/${issue.key}`
+    url: `${baseUrl}/browse/${issue.key}`
   })) || [];
 }
 

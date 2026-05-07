@@ -10,10 +10,10 @@ export default function Nav() {
   const activeProject = state.projects.find(p => p.id === state.activeProjectId);
 
   const tabs = [
-    { id: 'dashboard',    label: 'Dashboard' },
-    { id: 'workflow',     label: 'Workflow' },
-    { id: 'agents',       label: 'Agent Studio' },
-    { id: 'templates',    label: 'Templates' },
+    { id: 'dashboard',  label: 'Dashboard' },
+    { id: 'workflow',   label: 'Workflow' },
+    { id: 'agents',     label: 'Agent Studio' },
+    { id: 'templates',  label: 'Templates' },
   ];
 
   return (

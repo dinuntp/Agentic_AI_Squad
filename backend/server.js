@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import {
-  readFile, writeFile, mkdir, readdir, rename, rm, access
+  readFile, writeFile, mkdir, readdir, rename, rm
 } from 'fs/promises';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
@@ -12,16 +12,50 @@ import * as github from './connectors/github.js';
 import * as jira from './connectors/jira.js';
 import * as confluence from './connectors/confluence.js';
 
-dotenv.config();
-
+// Resolve __dirname before dotenv so the path is always relative to server.js,
+// not wherever `node` was launched from.
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+dotenv.config({ path: join(__dirname, '.env') });
 
 const PORT = process.env.PORT || 3030;
 const DATA_DIR = join(__dirname, 'data');
 const TEMPLATES_DIR = join(__dirname, 'templates');
+const PROJECT_INDEX = join(DATA_DIR, '_index.json');
 
 const AGENT_TYPES = ['lead-agent', 'developer-agent', 'tester-agent', 'regression-agent'];
+
+// ─── Project Folder Helpers ───────────────────────────────────────────────────
+
+function slugify(name) {
+  return name.toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 50) || 'project';
+}
+
+async function readProjectIndex() {
+  try { return JSON.parse(await readFile(PROJECT_INDEX, 'utf-8')); }
+  catch { return {}; }
+}
+
+async function updateProjectIndex(id, folderName) {
+  const idx = await readProjectIndex();
+  idx[id] = folderName;
+  await writeFile(PROJECT_INDEX, JSON.stringify(idx, null, 2), 'utf-8');
+}
+
+async function removeFromProjectIndex(id) {
+  const idx = await readProjectIndex();
+  delete idx[id];
+  await writeFile(PROJECT_INDEX, JSON.stringify(idx, null, 2), 'utf-8');
+}
+
+// Returns the on-disk folder path for a project (resolved via index).
+function getProjectDir(project) {
+  return join(DATA_DIR, project.folderName || project.id);
+}
 
 const app = express();
 app.use(cors());
@@ -46,24 +80,37 @@ async function writeJSON(filePath, data) {
   await rename(tmp, filePath);
 }
 
-async function fileExists(filePath) {
-  try {
-    await access(filePath);
-    return true;
-  } catch {
-    return false;
-  }
-}
 
 async function getProject(id) {
-  return readJSON(join(DATA_DIR, id, 'project.json'));
+  // Look up folder via index; fall back to UUID folder for legacy projects
+  const idx = await readProjectIndex();
+  const folderName = idx[id] || id;
+  return readJSON(join(DATA_DIR, folderName, 'project.json'));
 }
 
 async function saveProject(project) {
-  const dir = join(DATA_DIR, project.id);
+  // Assign a human-readable folder name on first save
+  if (!project.folderName) {
+    const base = slugify(project.name);
+    const candidate = base ? `${base}-${project.id.slice(0, 8)}` : project.id;
+    // If the old UUID-named folder exists, migrate it to the slug name
+    if (candidate !== project.id) {
+      const oldDir = join(DATA_DIR, project.id);
+      const newDir = join(DATA_DIR, candidate);
+      try {
+        await readdir(oldDir);          // throws if old folder doesn't exist
+        try { await readdir(newDir); }  // new folder already exists, skip rename
+        catch { await rename(oldDir, newDir); }
+      } catch { /* old folder absent, no migration needed */ }
+    }
+    project.folderName = candidate;
+  }
+
+  const dir = getProjectDir(project);
   await mkdir(dir, { recursive: true });
   await mkdir(join(dir, 'runs'), { recursive: true });
   await writeJSON(join(dir, 'project.json'), project);
+  await updateProjectIndex(project.id, project.folderName);
   return project;
 }
 
@@ -78,7 +125,7 @@ function computeStatus(project) {
 
 // ─── Status ───────────────────────────────────────────────────────────────────
 
-app.get('/api/status', (req, res) => {
+app.get('/api/status', (_req, res) => {
   res.json({
     status: 'ok',
     version: '1.0.0',
@@ -89,7 +136,7 @@ app.get('/api/status', (req, res) => {
 
 // ─── Projects ─────────────────────────────────────────────────────────────────
 
-app.get('/api/projects', async (req, res) => {
+app.get('/api/projects', async (_req, res) => {
   try {
     const entries = await readdir(DATA_DIR, { withFileTypes: true }).catch(() => []);
     const projects = [];
@@ -182,7 +229,8 @@ app.delete('/api/projects/:id', async (req, res) => {
   try {
     const project = await getProject(req.params.id);
     if (!project) return res.status(404).json({ error: 'Project not found' });
-    await rm(join(DATA_DIR, req.params.id), { recursive: true, force: true });
+    await rm(getProjectDir(project), { recursive: true, force: true });
+    await removeFromProjectIndex(req.params.id);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -325,7 +373,7 @@ app.put('/api/projects/:id/agents/reorder', async (req, res) => {
 
 // ─── Templates ────────────────────────────────────────────────────────────────
 
-app.get('/api/templates', async (req, res) => {
+app.get('/api/templates', async (_req, res) => {
   try {
     const templates = [];
     for (const type of AGENT_TYPES) {
@@ -393,7 +441,7 @@ async function saveCustomTemplates(templates) {
   await writeJSON(CUSTOM_TEMPLATES_FILE, templates);
 }
 
-app.get('/api/custom-templates', async (req, res) => {
+app.get('/api/custom-templates', async (_req, res) => {
   try {
     const templates = await readCustomTemplates();
     res.json(templates);
@@ -474,7 +522,7 @@ app.get('/api/projects/:id/runs', async (req, res) => {
     const project = await getProject(req.params.id);
     if (!project) return res.status(404).json({ error: 'Project not found' });
 
-    const runsDir = join(DATA_DIR, req.params.id, 'runs');
+    const runsDir = join(getProjectDir(project), 'runs');
     const files = await readdir(runsDir).catch(() => []);
     const runs = [];
     for (const f of files.filter(f => f.endsWith('.json'))) {
@@ -490,8 +538,10 @@ app.get('/api/projects/:id/runs', async (req, res) => {
 
 app.get('/api/projects/:id/runs/:runId', async (req, res) => {
   try {
+    const project = await getProject(req.params.id);
+    if (!project) return res.status(404).json({ error: 'Project not found' });
     const run = await readJSON(
-      join(DATA_DIR, req.params.id, 'runs', `${req.params.runId}.json`)
+      join(getProjectDir(project), 'runs', `${req.params.runId}.json`)
     );
     if (!run) return res.status(404).json({ error: 'Run not found' });
     res.json(run);
@@ -562,6 +612,38 @@ app.get('/api/projects/:id/jira-stories', async (req, res) => {
   }
 });
 
+// ─── Clarification Infrastructure ────────────────────────────────────────────
+// Holds paused pipeline promises keyed by sessionId (runId or a per-request UUID).
+const pendingClarifications = new Map();
+
+// Called by the frontend when the user submits answers to the Lead Agent's questions.
+app.post('/api/projects/:id/clarify/:sessionId', (req, res) => {
+  const { sessionId } = req.params;
+  const { answers } = req.body;
+  if (!Array.isArray(answers)) return res.status(400).json({ error: 'answers must be an array' });
+
+  const pending = pendingClarifications.get(sessionId);
+  if (!pending) return res.status(404).json({ error: 'No pending clarification for this session' });
+
+  pendingClarifications.delete(sessionId);
+  pending.resolve(answers);
+  res.json({ success: true });
+});
+
+// Returns a function the orchestrator can await to pause the pipeline until the user answers.
+function createClarificationWaiter(projectId, sessionId) {
+  return (questions) => new Promise((resolve, reject) => {
+    pendingClarifications.set(sessionId, { resolve, reject });
+    // Auto-expire after 10 minutes so the server doesn't leak memory on abandoned runs
+    setTimeout(() => {
+      if (pendingClarifications.has(sessionId)) {
+        pendingClarifications.delete(sessionId);
+        reject(new Error('Clarification timed out (10 min). Please restart the pipeline and answer the questions.'));
+      }
+    }, 600_000);
+  });
+}
+
 // ─── Single-Agent Execution (SSE) ─────────────────────────────────────────────
 
 app.post('/api/projects/:id/run-agent', async (req, res) => {
@@ -583,32 +665,53 @@ app.post('/api/projects/:id/run-agent', async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.flushHeaders();
 
+  let clientGone = false;
+
   const emit = (event, data) => {
-    try { res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`); } catch {}
+    if (clientGone) return;
+    try {
+      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    } catch (err) {
+      console.error(`[SSE run-agent] Write failed on ${event}:`, err.message);
+      clientGone = true;
+    }
   };
 
-  let clientGone = false;
-  req.on('close', () => { clientGone = true; });
+  const heartbeat = setInterval(() => {
+    if (clientGone) { clearInterval(heartbeat); return; }
+    try { res.write(': heartbeat\n\n'); } catch { clientGone = true; clearInterval(heartbeat); }
+  }, 15_000);
 
-  const safeEmit = (event, data) => { if (!clientGone) emit(event, data); };
+  req.on('close', () => { clientGone = true; clearInterval(heartbeat); });
+
+  // Orchestrator emits 'step_token'; single-agent client expects 'token'
+  const agentEmit = (event, data) => emit(event === 'step_token' ? 'token' : event, data);
+
+  // Look up manual story so agent gets its full description
+  const manualStory = project.stories?.find(s => s.key === storyKey.trim()) || null;
+
+  // Each run-agent call gets its own session ID for clarification pausing
+  const sessionId = uuidv4();
+  emit('session_id', { sessionId });
+  const waitForClarification = createClarificationWaiter(req.params.id, sessionId);
 
   try {
     const output = await runSingleAgent(
-      agent, project, storyKey.trim(), previousContext || [],
-      (event, data) => safeEmit(event, data)
+      agent, project, storyKey.trim(), previousContext || [], agentEmit, manualStory, waitForClarification
     );
 
-    safeEmit('complete', {
+    emit('complete', {
       agentId,
       agentType: agent.type,
       output,
       completedAt: new Date().toISOString()
     });
   } catch (err) {
-    safeEmit('error', { agentId, error: err.message });
+    emit('error', { agentId, error: err.message });
+  } finally {
+    clearInterval(heartbeat);
+    res.end();
   }
-
-  res.end();
 });
 
 // ─── Pipeline Execution (SSE) ─────────────────────────────────────────────────
@@ -641,11 +744,22 @@ app.post('/api/projects/:id/run', async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.flushHeaders();
 
+  let clientGone = false;
+
   const emit = (event, data) => {
+    if (clientGone) return;
     try {
       res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
-    } catch {}
+    } catch (err) {
+      console.error(`[SSE pipeline] Write failed on ${event}:`, err.message);
+      clientGone = true;
+    }
   };
+
+  const heartbeat = setInterval(() => {
+    if (clientGone) { clearInterval(heartbeat); return; }
+    try { res.write(': heartbeat\n\n'); } catch { clientGone = true; clearInterval(heartbeat); }
+  }, 15_000);
 
   // Create run record
   const runId = uuidv4();
@@ -671,7 +785,7 @@ app.post('/api/projects/:id/run', async (req, res) => {
     error: null
   };
 
-  const runsDir = join(DATA_DIR, project.id, 'runs');
+  const runsDir = join(getProjectDir(project), 'runs');
   await mkdir(runsDir, { recursive: true });
   await writeJSON(join(runsDir, `${runId}.json`), run);
 
@@ -682,22 +796,22 @@ app.post('/api/projects/:id/run', async (req, res) => {
     totalAgents: sortedAgents.length
   });
 
-  // Handle client disconnect
-  let clientGone = false;
-  req.on('close', () => { clientGone = true; });
+  req.on('close', () => { clientGone = true; clearInterval(heartbeat); });
 
-  const safeEmit = (event, data) => {
-    if (!clientGone) emit(event, data);
-  };
+  // Look up manual story by key so agents get its summary + description
+  const manualStory = project.stories?.find(s => s.key === jiraStory.trim()) || null;
+
+  // runId doubles as the clarification session ID for the full pipeline
+  const waitForClarification = createClarificationWaiter(req.params.id, runId);
 
   try {
-    await runPipeline(project, jiraStory.trim(), run, safeEmit);
+    await runPipeline(project, jiraStory.trim(), run, emit, manualStory, waitForClarification);
 
     run.status = 'completed';
     run.completedAt = new Date().toISOString();
     await writeJSON(join(runsDir, `${runId}.json`), run);
 
-    safeEmit('run_complete', {
+    emit('run_complete', {
       runId,
       status: 'completed',
       completedAt: run.completedAt
@@ -709,21 +823,32 @@ app.post('/api/projects/:id/run', async (req, res) => {
     run.error = err.message;
     await writeJSON(join(runsDir, `${runId}.json`), run);
 
-    safeEmit('run_error', {
+    emit('run_error', {
       runId,
       status: 'failed',
       error: err.message
     });
+  } finally {
+    clearInterval(heartbeat);
+    res.end();
   }
-
-  res.end();
 });
 
 // ─── Start Server ─────────────────────────────────────────────────────────────
+
+// Fail fast with a clear message if critical env vars are missing
+const REQUIRED_ENV = ['ANTHROPIC_API_KEY'];
+const missing = REQUIRED_ENV.filter(k => !process.env[k]?.trim());
+if (missing.length) {
+  console.error(`\n❌  Missing required environment variables: ${missing.join(', ')}`);
+  console.error(`   Ensure backend/.env exists and contains these keys.\n`);
+  process.exit(1);
+}
 
 app.listen(PORT, () => {
   console.log(`\n🤖 Agent AI Squad Backend`);
   console.log(`   Running at: http://localhost:${PORT}`);
   console.log(`   Data dir:   ${DATA_DIR}`);
-  console.log(`   Templates:  ${TEMPLATES_DIR}\n`);
+  console.log(`   Templates:  ${TEMPLATES_DIR}`);
+  console.log(`   Anthropic:  key loaded (${process.env.ANTHROPIC_API_KEY.slice(0, 12)}…)\n`);
 });

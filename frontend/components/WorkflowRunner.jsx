@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '../AppContext.jsx';
 import { Modal, ModalHeader, ModalBody, ModalFooter, getAgentType, Alert } from './UI.jsx';
-import { startRun } from '../client.js';
+import { startRun, submitClarification } from '../client.js';
 
 export default function WorkflowRunner({ project, onRunComplete }) {
   const { loadRuns } = useApp();
@@ -16,6 +16,9 @@ export default function WorkflowRunner({ project, onRunComplete }) {
   const [expandedSteps, setExpandedSteps] = useState({});
   const [finalError, setFinalError] = useState('');
   const [storyError, setStoryError] = useState('');
+  const [prInfo, setPrInfo] = useState(null);
+  const [clarification, setClarification] = useState(null); // { questions, answers[] }
+  const [clarifySubmitting, setClarifySubmitting] = useState(false);
   const logsRef = useRef(null);
 
   const sortedAgents = [...(project.agents || [])].sort((a, b) => a.order - b.order);
@@ -34,6 +37,7 @@ export default function WorkflowRunner({ project, onRunComplete }) {
     setLogs([]);
     setFinalError('');
     setStoryError('');
+    setPrInfo(null);
     setStepTokens({});
     setExpandedSteps({});
     // Initialize step statuses from project agents
@@ -52,6 +56,20 @@ export default function WorkflowRunner({ project, onRunComplete }) {
     setLogs(prev => [...prev, { time, msg }]);
   }
 
+  async function handleClarificationSubmit() {
+    if (!clarification || !runId) return;
+    setClarifySubmitting(true);
+    try {
+      await submitClarification(project.id, runId, clarification.answers);
+      addLog('Clarification answers submitted — Lead Agent resuming…');
+      setClarification(null);
+    } catch (err) {
+      addLog(`Failed to submit clarification: ${err.message}`);
+    } finally {
+      setClarifySubmitting(false);
+    }
+  }
+
   function handleRun() {
     const story = jiraStory.trim();
     if (!story) { setStoryError('Please enter a Jira story number'); return; }
@@ -61,6 +79,8 @@ export default function WorkflowRunner({ project, onRunComplete }) {
     setPhase('running');
     setRunning(true);
     setFinalError('');
+    setPrInfo(null);
+    setClarification(null);
     setStepTokens({});
     setExpandedSteps({});
     setSteps(sortedAgents.map(a => ({
@@ -77,6 +97,10 @@ export default function WorkflowRunner({ project, onRunComplete }) {
       onStart: (data) => {
         setRunId(data.runId);
         addLog(`Run ${data.runId.slice(0, 8)} started — ${data.totalAgents} agent(s) in pipeline`);
+      },
+      onClarificationNeeded: (data) => {
+        addLog(`Lead Agent needs clarification (${data.questions.length} question(s))`);
+        setClarification({ questions: data.questions, answers: data.questions.map(() => '') });
       },
       onLog: (data) => {
         addLog(data.message);
@@ -112,6 +136,10 @@ export default function WorkflowRunner({ project, onRunComplete }) {
             ? { ...s, status: 'failed', error: data.error }
             : s
         ));
+      },
+      onPRCreated: (data) => {
+        setPrInfo(data);
+        addLog(`PR #${data.prNumber} created: ${data.prUrl}`);
       },
       onComplete: (data) => {
         addLog('Pipeline completed successfully!');
@@ -218,11 +246,47 @@ export default function WorkflowRunner({ project, onRunComplete }) {
                   </div>
                 )}
 
-                {/* Jira Story Input */}
+                {/* Story Selection */}
                 <div className="card">
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 12 }}>
-                    Enter Jira Story to Execute
+                    Select or Enter Story
                   </div>
+
+                  {/* Manual stories list */}
+                  {(project.stories || []).length > 0 && (
+                    <div style={{ marginBottom: 14 }}>
+                      <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>
+                        Manual Stories
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {(project.stories || []).map(s => (
+                          <button
+                            key={s.id}
+                            onClick={() => { setJiraStory(s.key || s.summary.slice(0, 30)); setStoryError(''); }}
+                            style={{
+                              textAlign: 'left',
+                              padding: '8px 12px',
+                              borderRadius: 'var(--radius)',
+                              border: `1px solid ${jiraStory === (s.key || s.summary.slice(0, 30)) ? 'var(--primary)' : 'var(--border)'}`,
+                              background: jiraStory === (s.key || s.summary.slice(0, 30)) ? 'var(--primary-bg, #e8f0fe)' : 'var(--surface)',
+                              cursor: 'pointer',
+                              fontSize: 13,
+                              color: 'var(--text-primary)'
+                            }}
+                          >
+                            {s.key && <span style={{ fontWeight: 600, marginRight: 8, color: 'var(--primary)' }}>{s.key}</span>}
+                            <span>{s.summary}</span>
+                          </button>
+                        ))}
+                      </div>
+                      <div style={{ margin: '12px 0', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                        <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>or type a Jira key</span>
+                        <div style={{ flex: 1, height: 1, background: 'var(--border)' }} />
+                      </div>
+                    </div>
+                  )}
+
                   <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                     <div style={{ flex: 1 }}>
                       <input
@@ -231,12 +295,12 @@ export default function WorkflowRunner({ project, onRunComplete }) {
                         onChange={e => { setJiraStory(e.target.value); setStoryError(''); }}
                         placeholder="e.g. PROJ-123, GATEWAY-456"
                         onKeyDown={e => e.key === 'Enter' && isReady && handleRun()}
-                        autoFocus
+                        autoFocus={!(project.stories || []).length}
                         style={{ fontSize: 15, padding: '10px 14px' }}
                       />
                       {storyError && <div className="form-error">{storyError}</div>}
                       <div className="form-hint">
-                        The agents will fetch full story details from Jira automatically
+                        Manual stories above use their saved description. Jira keys are fetched live.
                       </div>
                     </div>
                   </div>
@@ -247,6 +311,61 @@ export default function WorkflowRunner({ project, onRunComplete }) {
                     Project is not ready. Please configure all agents and ensure Jira is connected.
                   </Alert>
                 )}
+              </div>
+            )}
+
+            {/* ── Clarification Modal Overlay ── */}
+            {clarification && (
+              <div style={{
+                position: 'absolute', inset: 0, zIndex: 10,
+                background: 'rgba(0,0,0,0.55)', display: 'flex',
+                alignItems: 'center', justifyContent: 'center',
+                borderRadius: 'var(--radius)',
+              }}>
+                <div style={{
+                  background: 'var(--surface)', borderRadius: 10,
+                  padding: '28px 32px', width: '90%', maxWidth: 560,
+                  boxShadow: '0 8px 40px rgba(0,0,0,0.35)',
+                  border: '1px solid var(--border)',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                    <span style={{ fontSize: 22 }}>❓</span>
+                    <span style={{ fontWeight: 700, fontSize: 16, color: 'var(--text-primary)' }}>
+                      Lead Agent needs clarification
+                    </span>
+                  </div>
+                  <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>
+                    The Lead Agent found ambiguities in the story. Please answer the questions below before it continues planning.
+                  </p>
+                  {clarification.questions.map((q, i) => (
+                    <div key={i} style={{ marginBottom: 16 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 6 }}>
+                        {i + 1}. {q}
+                      </div>
+                      <textarea
+                        className="form-input"
+                        rows={2}
+                        value={clarification.answers[i]}
+                        onChange={e => setClarification(prev => {
+                          const answers = [...prev.answers];
+                          answers[i] = e.target.value;
+                          return { ...prev, answers };
+                        })}
+                        placeholder="Your answer…"
+                        style={{ width: '100%', resize: 'vertical', fontSize: 13 }}
+                      />
+                    </div>
+                  ))}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 8 }}>
+                    <button
+                      className="btn btn-primary"
+                      onClick={handleClarificationSubmit}
+                      disabled={clarifySubmitting || clarification.answers.some(a => !a.trim())}
+                    >
+                      {clarifySubmitting ? 'Submitting…' : 'Submit Answers'}
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 
@@ -292,8 +411,25 @@ export default function WorkflowRunner({ project, onRunComplete }) {
                   })}
 
                   {phase === 'done' && (
-                    <div style={{ marginTop: 12, padding: '10px 12px', background: 'var(--success-bg)', borderRadius: 'var(--radius)', border: '1px solid var(--success-border)', color: 'var(--success)', fontSize: 12, fontWeight: 600 }}>
-                      ✓ Pipeline completed successfully!
+                    <div style={{ marginTop: 12 }}>
+                      <div style={{ padding: '10px 12px', background: 'var(--success-bg)', borderRadius: 'var(--radius)', border: '1px solid var(--success-border)', color: 'var(--success)', fontSize: 12, fontWeight: 600, marginBottom: prInfo ? 8 : 0 }}>
+                        ✓ Pipeline completed successfully!
+                      </div>
+                      {prInfo && (
+                        <div style={{ padding: '10px 12px', background: 'var(--info-bg, #e8f4fd)', borderRadius: 'var(--radius)', border: '1px solid var(--info-border, #90caf9)', fontSize: 12 }}>
+                          <div style={{ fontWeight: 600, marginBottom: 4 }}>Pull Request Created</div>
+                          <div style={{ marginBottom: 2 }}>
+                            <strong>PR #{prInfo.prNumber}:</strong> {prInfo.prTitle}
+                          </div>
+                          <div style={{ marginBottom: 2 }}>
+                            <strong>Branch:</strong> {prInfo.branchName}
+                          </div>
+                          <a href={prInfo.prUrl} target="_blank" rel="noreferrer"
+                            style={{ color: 'var(--info, #1976d2)', fontWeight: 600 }}>
+                            View on GitHub →
+                          </a>
+                        </div>
+                      )}
                     </div>
                   )}
 

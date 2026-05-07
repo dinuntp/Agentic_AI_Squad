@@ -47,10 +47,14 @@ export const deleteCustomTemplate  = (id)      => req('DELETE', `/custom-templat
 export const getRuns = (pid)           => req('GET', `/projects/${pid}/runs`);
 export const getRun  = (pid, rid)      => req('GET', `/projects/${pid}/runs/${rid}`);
 
+// ─── Clarification ────────────────────────────────────────────────────────────
+export const submitClarification = (pid, sessionId, answers) =>
+  req('POST', `/projects/${pid}/clarify/${sessionId}`, { answers });
+
 // ─── Single-agent SSE run ─────────────────────────────────────────────────────
 
 export function runAgent(projectId, agentId, storyKey, previousContext, callbacks) {
-  const { onToken, onComplete, onError } = callbacks;
+  const { onToken, onComplete, onError, onClarificationNeeded, onSessionId, onPRCreated } = callbacks;
 
   fetch(`${BASE}/projects/${projectId}/run-agent`, {
     method: 'POST',
@@ -76,9 +80,12 @@ export function runAgent(projectId, agentId, storyKey, previousContext, callback
           else if (line.startsWith('data: ')) {
             try {
               const data = JSON.parse(line.slice(6));
-              if (currentEvent === 'token')    onToken?.(data.token);
-              if (currentEvent === 'complete') onComplete?.(data);
-              if (currentEvent === 'error')    onError?.(data);
+              if (currentEvent === 'token')                onToken?.(data.token);
+              if (currentEvent === 'complete')             onComplete?.(data);
+              if (currentEvent === 'error')                onError?.(data);
+              if (currentEvent === 'clarification_needed') onClarificationNeeded?.(data);
+              if (currentEvent === 'session_id')           onSessionId?.(data);
+              if (currentEvent === 'pr_created')           onPRCreated?.(data);
             } catch {}
             currentEvent = '';
           }
@@ -92,8 +99,8 @@ export function runAgent(projectId, agentId, storyKey, previousContext, callback
 
 // ─── Full pipeline SSE run ────────────────────────────────────────────────────
 
-export function runPipeline(projectId, storyKey, callbacks) {
-  const { onStart, onLog, onStepStart, onStepToken, onStepComplete, onStepError, onComplete, onError } = callbacks;
+export function startRun(projectId, storyKey, callbacks) {
+  const { onStart, onLog, onStepStart, onStepToken, onStepComplete, onStepError, onComplete, onError, onPRCreated, onClarificationNeeded } = callbacks;
 
   fetch(`${BASE}/projects/${projectId}/run`, {
     method: 'POST',
@@ -119,14 +126,16 @@ export function runPipeline(projectId, storyKey, callbacks) {
             try {
               const data = JSON.parse(line.slice(6));
               const ev = currentEvent;
-              if (ev === 'run_started')    onStart?.(data);
-              if (ev === 'pipeline_log')   onLog?.(data);
-              if (ev === 'step_start')     onStepStart?.(data);
-              if (ev === 'step_token')     onStepToken?.(data);
-              if (ev === 'step_complete')  onStepComplete?.(data);
-              if (ev === 'step_error')     onStepError?.(data);
+              if (ev === 'run_started')         onStart?.(data);
+              if (ev === 'pipeline_log')        onLog?.(data);
+              if (ev === 'step_start')          onStepStart?.(data);
+              if (ev === 'step_token')          onStepToken?.(data);
+              if (ev === 'step_complete')       onStepComplete?.(data);
+              if (ev === 'step_error')          onStepError?.(data);
               if (ev === 'run_complete' || ev === 'pipeline_complete') onComplete?.(data);
-              if (ev === 'run_error')      onError?.(data);
+              if (ev === 'run_error')           onError?.(data);
+              if (ev === 'pr_created')          onPRCreated?.(data);
+              if (ev === 'clarification_needed') onClarificationNeeded?.(data);
             } catch {}
             currentEvent = '';
           }

@@ -1,0 +1,30 @@
+# Environment — NEVER commit secrets
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build output
+dist/
+build/
+.vite/
+
+# Runtime data
+backend/data/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.suo
+*.user

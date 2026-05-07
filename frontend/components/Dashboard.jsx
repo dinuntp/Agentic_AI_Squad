@@ -146,14 +146,184 @@ function NewProjectModal({ onClose }) {
   );
 }
 
+// ─── Edit Project Modal ───────────────────────────────────────────────────────
+
+function EditProjectModal({ project, onClose }) {
+  const { actions } = useApp();
+  const [form, setForm] = useState({
+    name: project.name || '',
+    description: project.description || '',
+    git: {
+      repoUrl: project.git?.repoUrl || '',
+      owner: project.git?.owner || '',
+      repo: project.git?.repo || '',
+      branch: project.git?.branch || 'main',
+      token: project.git?.token || '',
+    },
+    jira: {
+      url: project.jira?.url || '',
+      email: project.jira?.email || '',
+      token: project.jira?.token || '',
+      projectKey: project.jira?.projectKey || '',
+    },
+    confluence: {
+      url: project.confluence?.url || '',
+      email: project.confluence?.email || '',
+      token: project.confluence?.token || '',
+      spaceKey: project.confluence?.spaceKey || '',
+    },
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [step, setStep] = useState(1);
+
+  function setNested(path, value) {
+    setForm(f => {
+      const [k1, k2] = path.split('.');
+      if (!k2) return { ...f, [k1]: value };
+      return { ...f, [k1]: { ...f[k1], [k2]: value } };
+    });
+  }
+
+  function inp(label, path, type = 'text', ph = '') {
+    const [k1, k2] = path.split('.');
+    const val = k2 ? form[k1][k2] : form[path];
+    return (
+      <div className="form-group" style={{ marginBottom: 14 }}>
+        <label>{label}</label>
+        <input
+          type={type} placeholder={ph || label} value={val}
+          onChange={e => setNested(path, e.target.value)}
+        />
+      </div>
+    );
+  }
+
+  async function handleSave() {
+    if (!form.name.trim()) { setError('Project name is required'); return; }
+    setSaving(true);
+    setError('');
+    try {
+      await actions.updateProject(project.id, form);
+      onClose();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const steps = ['Project Info', 'Git Repository', 'Jira', 'Confluence'];
+
+  return (
+    <Modal onClose={onClose} width={560}>
+      <ModalHeader
+        title="Edit Project"
+        subtitle={`Update settings for "${project.name}"`}
+        onClose={onClose}
+      />
+      <ModalBody>
+        {/* Step indicator */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 20 }}>
+          {steps.map((s, i) => (
+            <div key={i}
+              onClick={() => setStep(i + 1)}
+              style={{
+                flex: 1, textAlign: 'center', padding: '5px 4px', borderRadius: 6, cursor: 'pointer',
+                background: step === i + 1 ? 'var(--accent-bg)' : 'var(--bg2)',
+                border: `1px solid ${step === i + 1 ? 'var(--accent-border)' : 'var(--border2)'}`,
+                color: step === i + 1 ? 'var(--accent)' : 'var(--text4)',
+                fontSize: 11, fontWeight: 700,
+              }}
+            >{s}</div>
+          ))}
+        </div>
+
+        {error && (
+          <div style={{ padding: '8px 12px', background: 'var(--red-bg)', border: '1px solid var(--red-border)', borderRadius: 'var(--radius-sm)', color: 'var(--red)', fontSize: 12, marginBottom: 14 }}>
+            {error}
+          </div>
+        )}
+
+        {step === 1 && (
+          <>
+            {inp('Project Name *', 'name', 'text', 'e.g. Gateway Pro')}
+            <div className="form-group">
+              <label>Description</label>
+              <textarea rows={3} placeholder="Brief description…" value={form.description}
+                onChange={e => setForm(f => ({ ...f, description: e.target.value }))} style={{ resize: 'none' }} />
+            </div>
+          </>
+        )}
+
+        {step === 2 && (
+          <>
+            <div style={{ padding: '10px 12px', background: 'var(--bg2)', borderRadius: 'var(--radius-sm)', fontSize: 12, color: 'var(--text3)', marginBottom: 14 }}>
+              GitHub credentials for reading code and creating branches/PRs.
+            </div>
+            {inp('Repository URL', 'git.repoUrl', 'text', 'https://github.com/org/repo')}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              {inp('Owner / Org', 'git.owner', 'text', 'your-org')}
+              {inp('Repository', 'git.repo', 'text', 'your-repo')}
+              {inp('Default Branch', 'git.branch', 'text', 'main')}
+              {inp('Personal Access Token', 'git.token', 'password', 'ghp_...')}
+            </div>
+          </>
+        )}
+
+        {step === 3 && (
+          <>
+            <div style={{ padding: '10px 12px', background: 'var(--bg2)', borderRadius: 'var(--radius-sm)', fontSize: 12, color: 'var(--text3)', marginBottom: 14 }}>
+              Jira credentials so agents can read stories. Must be a full URL — e.g. <code>https://yourcompany.atlassian.net</code>
+            </div>
+            {inp('Jira URL', 'jira.url', 'text', 'https://yourcompany.atlassian.net')}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              {inp('Email', 'jira.email', 'email', 'you@company.com')}
+              {inp('API Token', 'jira.token', 'password', 'Your Jira API token')}
+              {inp('Project Key', 'jira.projectKey', 'text', 'PROJ')}
+            </div>
+          </>
+        )}
+
+        {step === 4 && (
+          <>
+            <div style={{ padding: '10px 12px', background: 'var(--bg2)', borderRadius: 'var(--radius-sm)', fontSize: 12, color: 'var(--text3)', marginBottom: 14 }}>
+              Confluence credentials for reading documentation.
+            </div>
+            {inp('Confluence URL', 'confluence.url', 'text', 'https://yourcompany.atlassian.net/wiki')}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              {inp('Email', 'confluence.email', 'email', 'you@company.com')}
+              {inp('API Token', 'confluence.token', 'password', 'Your Confluence token')}
+              {inp('Space Key', 'confluence.spaceKey', 'text', 'TECH')}
+            </div>
+          </>
+        )}
+      </ModalBody>
+      <ModalFooter>
+        <Btn onClick={onClose} disabled={saving}>Cancel</Btn>
+        {step > 1 && <Btn onClick={() => setStep(s => s - 1)} disabled={saving}>← Back</Btn>}
+        {step < 4
+          ? <Btn primary onClick={() => setStep(s => s + 1)}>Next →</Btn>
+          : <Btn primary onClick={handleSave} disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</Btn>
+        }
+      </ModalFooter>
+    </Modal>
+  );
+}
+
+// ─── Project Card ─────────────────────────────────────────────────────────────
+
 function ProjectCard({ proj }) {
   const { actions } = useApp();
   const [hovered, setHovered] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
   const sortedAgents = [...(proj.agents || [])].sort((a, b) => a.order - b.order);
   const stories = proj.stories || [];
   const pct = proj.status === 'ready' ? 100 : proj.status === 'draft' ? 25 : 50;
 
   return (
+    <>
+    {showEdit && <EditProjectModal project={proj} onClose={() => setShowEdit(false)} />}
     <div
       onClick={() => { actions.setProject(proj.id); }}
       onMouseEnter={() => setHovered(true)}
@@ -173,7 +343,12 @@ function ProjectCard({ proj }) {
         {/* Controls */}
         <div style={{ position: 'absolute', top: 14, right: 8, display: 'flex', gap: 2, opacity: hovered ? 1 : 0, transition: 'opacity .15s' }}>
           <button
+            onClick={e => { e.stopPropagation(); setShowEdit(true); }}
+            title="Edit project settings"
+            style={{ background: 'transparent', border: 'none', color: 'var(--text4)', fontSize: 13, cursor: 'pointer', padding: '2px 6px', borderRadius: 4 }}>✏️</button>
+          <button
             onClick={e => { e.stopPropagation(); if (confirm(`Delete "${proj.name}"?`)) actions.deleteProject(proj.id); }}
+            title="Delete project"
             style={{ background: 'transparent', border: 'none', color: 'var(--text4)', fontSize: 13, cursor: 'pointer', padding: '2px 6px', borderRadius: 4 }}>✕</button>
         </div>
 
@@ -234,6 +409,7 @@ function ProjectCard({ proj }) {
         <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent)' }}>Open →</span>
       </div>
     </div>
+    </>
   );
 }
 

@@ -13,8 +13,14 @@ function buildHeaders(config) {
   };
 }
 
+function normalizeUrl(raw) {
+  if (!raw) return raw;
+  const s = raw.trim();
+  return s.startsWith('http://') || s.startsWith('https://') ? s : `https://${s}`;
+}
+
 async function confluenceFetch(config, path, options = {}) {
-  const baseUrl = config.url.replace(/\/$/, '');
+  const baseUrl = normalizeUrl(config.url).replace(/\/$/, '');
   const url = `${baseUrl}/rest/api${path}`;
   const res = await fetch(url, {
     ...options,
@@ -41,7 +47,7 @@ export async function searchPages(config, query, spaceKey, maxResults = 10) {
     id: page.id,
     title: page.title,
     spaceKey: page.space?.key,
-    url: `${config.url.replace('/wiki', '')}/wiki${page._links?.webui || ''}`,
+    url: `${normalizeUrl(config.url).replace(/\/wiki\/?$/, '')}/wiki${page._links?.webui || ''}`,
     excerpt: stripHtml(page.body?.view?.value || '').slice(0, 300)
   })) || [];
 }
@@ -56,7 +62,7 @@ export async function getPage(config, pageId) {
     title: page.title,
     spaceKey: page.space?.key,
     version: page.version?.number,
-    url: `${config.url.replace('/wiki', '')}/wiki${page._links?.webui || ''}`,
+    url: `${normalizeUrl(config.url).replace(/\/wiki\/?$/, '')}/wiki${page._links?.webui || ''}`,
     content: stripHtml(page.body?.view?.value || ''),
     ancestors: page.ancestors?.map(a => a.title) || []
   };
