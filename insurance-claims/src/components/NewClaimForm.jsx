@@ -2,304 +2,239 @@ import React, { useState } from 'react';
 
 const CLAIM_TYPES = ['Auto', 'Health', 'Property', 'Life'];
 
-const INITIAL_FORM = {
+const INITIAL_FORM_DATA = {
   claimantName: '',
   email: '',
   phone: '',
   type: '',
   incidentDate: '',
   amount: '',
-  description: '',
+  description: ''
 };
 
-function generateClaimId(existingIds) {
-  // Find the highest numeric suffix in existing IDs and increment
-  let maxNum = 1000;
-  for (const id of existingIds) {
-    const match = id.match(/CLM-(\d+)/);
-    if (match) {
-      const num = parseInt(match[1], 10);
-      if (num > maxNum) maxNum = num;
-    }
-  }
-  return `CLM-${maxNum + 1}`;
-}
-
-function validateForm(form) {
-  const errors = {};
-
-  if (!form.claimantName.trim()) {
-    errors.claimantName = 'Claimant name is required.';
-  }
-
-  if (!form.email.trim()) {
-    errors.email = 'Email address is required.';
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) {
-    errors.email = 'Please enter a valid email address.';
-  }
-
-  if (!form.phone.trim()) {
-    errors.phone = 'Phone number is required.';
-  }
-
-  if (!form.type) {
-    errors.type = 'Please select a claim type.';
-  }
-
-  if (!form.incidentDate) {
-    errors.incidentDate = 'Incident date is required.';
-  } else {
-    const selected = new Date(form.incidentDate + 'T00:00:00');
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    if (selected > today) {
-      errors.incidentDate = 'Incident date cannot be in the future.';
-    }
-  }
-
-  const amountNum = parseFloat(form.amount);
-  if (!form.amount && form.amount !== 0) {
-    errors.amount = 'Claim amount is required.';
-  } else if (isNaN(amountNum) || amountNum < 1) {
-    errors.amount = 'Claim amount must be at least $1.';
-  }
-
-  if (!form.description.trim()) {
-    errors.description = 'Description is required.';
-  } else if (form.description.trim().length < 20) {
-    errors.description = 'Description must be at least 20 characters.';
-  }
-
-  return errors;
-}
-
-export default function NewClaimForm({ onSubmit, onCancel, existingIds }) {
-  const [form, setForm] = useState(INITIAL_FORM);
+function NewClaimForm({ onSubmit, onCancel }) {
+  const [formData, setFormData] = useState({ ...INITIAL_FORM_DATA });
   const [errors, setErrors] = useState({});
-  const [submitted, setSubmitted] = useState(false);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+  const getTodayString = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
-    // Clear error on change after first submit attempt
-    if (submitted && errors[name]) {
+  const validateEmail = (email) => {
+    const pattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return pattern.test(email);
+  };
+
+  const validate = () => {
+    const newErrors = {};
+
+    if (!formData.claimantName.trim()) {
+      newErrors.claimantName = 'Claimant Full Name is required';
+    }
+
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email Address is required';
+    } else if (!validateEmail(formData.email.trim())) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+
+    if (!formData.phone.trim()) {
+      newErrors.phone = 'Phone Number is required';
+    }
+
+    if (!formData.type) {
+      newErrors.type = 'Claim Type is required';
+    }
+
+    if (!formData.incidentDate) {
+      newErrors.incidentDate = 'Incident Date is required';
+    } else if (formData.incidentDate > getTodayString()) {
+      newErrors.incidentDate = 'Incident date cannot be in the future';
+    }
+
+    if (!formData.amount) {
+      newErrors.amount = 'Claim Amount is required';
+    } else if (parseFloat(formData.amount) < 1) {
+      newErrors.amount = 'Amount must be at least $1';
+    }
+
+    if (!formData.description.trim()) {
+      newErrors.description = 'Description of Incident is required';
+    } else if (formData.description.trim().length < 20) {
+      newErrors.description = 'Description must be at least 20 characters';
+    }
+
+    return newErrors;
+  };
+
+  const handleChange = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) {
       setErrors((prev) => {
-        const next = { ...prev };
-        delete next[name];
-        return next;
+        const updated = { ...prev };
+        delete updated[field];
+        return updated;
       });
     }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    setSubmitted(true);
-
-    const validationErrors = validateForm(form);
-    setErrors(validationErrors);
-
+    const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
       return;
     }
 
-    const now = new Date();
-    const dateFiled = now.toISOString().split('T')[0];
-    const newClaim = {
-      id: generateClaimId(existingIds),
-      claimantName: form.claimantName.trim(),
-      email: form.email.trim(),
-      phone: form.phone.trim(),
-      type: form.type,
-      incidentDate: form.incidentDate,
-      amount: parseFloat(form.amount),
-      description: form.description.trim(),
-      status: 'Submitted',
-      dateFiled,
-      history: [
-        { status: 'Submitted', timestamp: now.toISOString() },
-      ],
-    };
-
-    onSubmit(newClaim);
+    onSubmit({
+      claimantName: formData.claimantName.trim(),
+      email: formData.email.trim(),
+      phone: formData.phone.trim(),
+      type: formData.type,
+      incidentDate: formData.incidentDate,
+      amount: parseFloat(formData.amount),
+      description: formData.description.trim()
+    });
   };
 
-  const inputClass = (field) =>
-    `form-input ${errors[field] ? 'form-input--error' : ''}`;
+  const inputClass = (field) => {
+    return errors[field] ? 'input-error' : '';
+  };
 
   return (
-    <div className="form-container" data-testid="new-claim-form">
-      <div className="form-card">
-        <h2 className="form-card__title">Submit New Claim</h2>
-        <form onSubmit={handleSubmit} noValidate>
-          <div className="form-grid">
-            {/* Claimant Name */}
-            <div className="form-group">
-              <label className="form-label" htmlFor="claimantName">
-                Claimant Full Name<span className="form-label__required">*</span>
-              </label>
-              <input
-                id="claimantName"
-                name="claimantName"
-                type="text"
-                className={inputClass('claimantName')}
-                value={form.claimantName}
-                onChange={handleChange}
-                placeholder="Enter full name"
-                data-testid="input-claimantName"
-              />
-              <div className="form-error" data-testid="error-claimantName">
-                {errors.claimantName || ''}
-              </div>
-            </div>
+    <div className="form-container">
+      <h2 className="form-title">Submit New Claim</h2>
+      <p className="form-subtitle">Fill in the details below to submit a new insurance claim.</p>
 
-            {/* Email */}
-            <div className="form-group">
-              <label className="form-label" htmlFor="email">
-                Email Address<span className="form-label__required">*</span>
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                className={inputClass('email')}
-                value={form.email}
-                onChange={handleChange}
-                placeholder="name@example.com"
-                data-testid="input-email"
-              />
-              <div className="form-error" data-testid="error-email">
-                {errors.email || ''}
-              </div>
-            </div>
+      <form onSubmit={handleSubmit} noValidate>
+        <div className="form-group">
+          <label htmlFor="claimantName">
+            Claimant Full Name <span className="required">*</span>
+          </label>
+          <input
+            id="claimantName"
+            type="text"
+            className={inputClass('claimantName')}
+            value={formData.claimantName}
+            onChange={(e) => handleChange('claimantName', e.target.value)}
+            placeholder="Enter full name"
+          />
+          {errors.claimantName && <div className="form-error">{errors.claimantName}</div>}
+        </div>
 
-            {/* Phone */}
-            <div className="form-group">
-              <label className="form-label" htmlFor="phone">
-                Phone Number<span className="form-label__required">*</span>
-              </label>
-              <input
-                id="phone"
-                name="phone"
-                type="text"
-                className={inputClass('phone')}
-                value={form.phone}
-                onChange={handleChange}
-                placeholder="555-0100"
-                data-testid="input-phone"
-              />
-              <div className="form-error" data-testid="error-phone">
-                {errors.phone || ''}
-              </div>
-            </div>
-
-            {/* Claim Type */}
-            <div className="form-group">
-              <label className="form-label" htmlFor="type">
-                Claim Type<span className="form-label__required">*</span>
-              </label>
-              <select
-                id="type"
-                name="type"
-                className={`form-select ${errors.type ? 'form-select--error' : ''}`}
-                value={form.type}
-                onChange={handleChange}
-                data-testid="input-type"
-              >
-                <option value="">Select type...</option>
-                {CLAIM_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {t}
-                  </option>
-                ))}
-              </select>
-              <div className="form-error" data-testid="error-type">
-                {errors.type || ''}
-              </div>
-            </div>
-
-            {/* Incident Date */}
-            <div className="form-group">
-              <label className="form-label" htmlFor="incidentDate">
-                Incident Date<span className="form-label__required">*</span>
-              </label>
-              <input
-                id="incidentDate"
-                name="incidentDate"
-                type="date"
-                className={inputClass('incidentDate')}
-                value={form.incidentDate}
-                onChange={handleChange}
-                data-testid="input-incidentDate"
-              />
-              <div className="form-error" data-testid="error-incidentDate">
-                {errors.incidentDate || ''}
-              </div>
-            </div>
-
-            {/* Claim Amount */}
-            <div className="form-group">
-              <label className="form-label" htmlFor="amount">
-                Claim Amount ($)<span className="form-label__required">*</span>
-              </label>
-              <input
-                id="amount"
-                name="amount"
-                type="number"
-                min="1"
-                step="0.01"
-                className={inputClass('amount')}
-                value={form.amount}
-                onChange={handleChange}
-                placeholder="0.00"
-                data-testid="input-amount"
-              />
-              <div className="form-error" data-testid="error-amount">
-                {errors.amount || ''}
-              </div>
-            </div>
-
-            {/* Description */}
-            <div className="form-group form-group--full">
-              <label className="form-label" htmlFor="description">
-                Description of Incident<span className="form-label__required">*</span>
-              </label>
-              <textarea
-                id="description"
-                name="description"
-                className={`form-textarea ${errors.description ? 'form-textarea--error' : ''}`}
-                value={form.description}
-                onChange={handleChange}
-                placeholder="Describe the incident in detail (minimum 20 characters)..."
-                data-testid="input-description"
-              />
-              <div className="form-error" data-testid="error-description">
-                {errors.description || ''}
-              </div>
-            </div>
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="email">
+              Email Address <span className="required">*</span>
+            </label>
+            <input
+              id="email"
+              type="email"
+              className={inputClass('email')}
+              value={formData.email}
+              onChange={(e) => handleChange('email', e.target.value)}
+              placeholder="name@example.com"
+            />
+            {errors.email && <div className="form-error">{errors.email}</div>}
           </div>
 
-          <div className="form-actions">
-            <button
-              type="button"
-              className="btn-cancel"
-              onClick={onCancel}
-              data-testid="btn-cancel"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="btn-submit"
-              data-testid="btn-submit"
-            >
-              Submit Claim
-            </button>
+          <div className="form-group">
+            <label htmlFor="phone">
+              Phone Number <span className="required">*</span>
+            </label>
+            <input
+              id="phone"
+              type="text"
+              className={inputClass('phone')}
+              value={formData.phone}
+              onChange={(e) => handleChange('phone', e.target.value)}
+              placeholder="555-0100"
+            />
+            {errors.phone && <div className="form-error">{errors.phone}</div>}
           </div>
-        </form>
-      </div>
+        </div>
+
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="type">
+              Claim Type <span className="required">*</span>
+            </label>
+            <select
+              id="type"
+              className={inputClass('type')}
+              value={formData.type}
+              onChange={(e) => handleChange('type', e.target.value)}
+            >
+              <option value="">Select claim type</option>
+              {CLAIM_TYPES.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+            {errors.type && <div className="form-error">{errors.type}</div>}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="incidentDate">
+              Incident Date <span className="required">*</span>
+            </label>
+            <input
+              id="incidentDate"
+              type="date"
+              className={inputClass('incidentDate')}
+              value={formData.incidentDate}
+              max={getTodayString()}
+              onChange={(e) => handleChange('incidentDate', e.target.value)}
+            />
+            {errors.incidentDate && <div className="form-error">{errors.incidentDate}</div>}
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="amount">
+            Claim Amount ($) <span className="required">*</span>
+          </label>
+          <input
+            id="amount"
+            type="number"
+            className={inputClass('amount')}
+            value={formData.amount}
+            min="1"
+            step="0.01"
+            onChange={(e) => handleChange('amount', e.target.value)}
+            placeholder="0.00"
+          />
+          {errors.amount && <div className="form-error">{errors.amount}</div>}
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="description">
+            Description of Incident <span className="required">*</span>
+          </label>
+          <textarea
+            id="description"
+            className={inputClass('description')}
+            value={formData.description}
+            onChange={(e) => handleChange('description', e.target.value)}
+            placeholder="Describe the incident in detail (minimum 20 characters)..."
+          />
+          {errors.description && <div className="form-error">{errors.description}</div>}
+        </div>
+
+        <div className="form-actions">
+          <button type="button" className="btn-cancel" onClick={onCancel}>
+            Cancel
+          </button>
+          <button type="submit" className="btn-submit">
+            Submit Claim
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
 
-export { CLAIM_TYPES, INITIAL_FORM, generateClaimId, validateForm };
+export default NewClaimForm;
