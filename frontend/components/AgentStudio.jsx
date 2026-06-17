@@ -185,21 +185,24 @@ function AgentCard({ agent, stepIndex, isActive, isLocked, agentStatus, output, 
         </div>
       </div>
 
-      {/* Output area */}
-      {expanded && output && (
+      {/* Output area — shows when expanded, even while waiting for first token */}
+      {expanded && (isRunning || output) && (
         <div style={{ borderTop: '1px solid var(--border2)', padding: '0 20px 16px' }}>
+          <div style={{ fontSize: 10, color: 'var(--text4)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', margin: '10px 0 6px' }}>
+            {isRunning ? 'Live Output' : 'Agent Output'}
+          </div>
           <div style={{
-            marginTop: 12,
             fontSize: 11.5, fontFamily: 'var(--font-mono)',
             background: '#0F0A1A', color: '#E8D5FF',
             borderRadius: 8, padding: '14px 16px',
             maxHeight: 380, overflowY: 'auto',
             lineHeight: 1.7, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+            minHeight: 48,
           }} ref={outputRef}>
-            {output}
-            {isRunning && <span style={{ opacity: 0.6 }}>▊</span>}
+            {output || <span style={{ opacity: 0.4 }}>Waiting for response...</span>}
+            {isRunning && output && <span style={{ opacity: 0.6 }}>▊</span>}
           </div>
-          {isDone && (
+          {isDone && output && (
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 8, gap: 8 }}>
               <Btn ghost small onClick={() => navigator.clipboard?.writeText(output)}>
                 Copy Output

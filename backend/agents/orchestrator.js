@@ -794,6 +794,9 @@ ${gitContext}`;
 // ─── Single Agent Runner (exported for step-by-step UI) ──────────────────────
 
 export async function runSingleAgent(agent, project, storyKey, previousContext, emit) {
+  emit('pipeline_log', { message: `▶ Starting ${agent.name} for story: ${storyKey}` });
+  emit('pipeline_log', { message: '🔍 Gathering context from Jira, Git and Confluence...' });
+
   // Gather shared context (non-blocking — skip if connectors not configured)
   let jiraCtx = `Jira Story: ${storyKey}`;
   let gitCtx = `Repository: ${project.git?.repoUrl || 'Not configured'}`;
@@ -807,10 +810,16 @@ export async function runSingleAgent(agent, project, storyKey, previousContext, 
 
   const sharedContext = `# Project: ${project.name}\n\n${jiraCtx}\n\n${confCtx}\n\n${gitCtx}`;
 
+  emit('pipeline_log', { message: '✓ Context ready. Building agent prompt...' });
+
   // Build previous outputs text from the array passed in from frontend
   const previousOutputsText = (previousContext || [])
     .map(p => `### Output from ${p.agentName} (${p.agentType})\n${p.output}`)
     .join('\n\n---\n\n');
+
+  if (previousContext?.length) {
+    emit('pipeline_log', { message: `📋 Loaded output from ${previousContext.length} prior agent(s)` });
+  }
 
   const pipelineContext = {
     jiraStory: storyKey,
@@ -831,7 +840,12 @@ export async function runSingleAgent(agent, project, storyKey, previousContext, 
     }
   }
 
+  emit('pipeline_log', { message: `🤖 ${agent.name} is thinking... (streaming output below)` });
+
   const { output, usage, model } = await runAgent(agent, pipelineContext, emit, previousOutputsText);
+
+  const tokenCount = output.split(/\s+/).length;
+  emit('pipeline_log', { message: `✓ ${agent.name} completed (~${tokenCount} words). Model: ${model || 'claude'}` });
 
   if (agent.type === 'developer-agent') {
     const savedFiles = await parseAndSaveFiles(output, project, null, emit);
