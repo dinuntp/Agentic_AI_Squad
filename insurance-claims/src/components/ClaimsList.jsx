@@ -1,78 +1,50 @@
-import React, { useState, useMemo } from 'react';
+import React from 'react';
 
-const FILTER_TABS = ['All', 'Submitted', 'Under Review', 'Approved', 'Rejected'];
+const STATUS_TABS = ['All', 'Submitted', 'Under Review', 'Approved', 'Rejected'];
 
-function getStatusClass(status) {
-  const map = {
-    'Submitted': 'submitted',
-    'Under Review': 'under-review',
-    'Approved': 'approved',
-    'Rejected': 'rejected',
+function ClaimsList({ claims, filterStatus, searchQuery, onFilterChange, onSearchChange, onSelectClaim }) {
+  const getStatusClass = (status) => {
+    const map = {
+      'Submitted': 'badge-submitted',
+      'Under Review': 'badge-under-review',
+      'Approved': 'badge-approved',
+      'Rejected': 'badge-rejected'
+    };
+    return 'badge ' + (map[status] || '');
   };
-  return map[status] || 'submitted';
-}
 
-function formatCurrency(amount) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
-
-export default function ClaimsList({ claims, onViewClaim }) {
-  const [activeFilter, setActiveFilter] = useState('All');
-  const [searchTerm, setSearchTerm] = useState('');
-
-  const filteredClaims = useMemo(() => {
-    let result = claims;
-
-    // Apply status filter
-    if (activeFilter !== 'All') {
-      result = result.filter((c) => c.status === activeFilter);
-    }
-
-    // Apply search filter (AND logic with status filter)
-    if (searchTerm.trim()) {
-      const term = searchTerm.trim().toLowerCase();
-      result = result.filter(
-        (c) =>
-          c.claimantName.toLowerCase().includes(term) ||
-          c.id.toLowerCase().includes(term)
-      );
-    }
-
-    return result;
-  }, [claims, activeFilter, searchTerm]);
+  const formatCurrency = (amount) => {
+    return '$' + amount.toLocaleString();
+  };
 
   return (
-    <div data-testid="claims-list">
-      <div className="filter-bar">
-        <div className="filter-tabs" data-testid="filter-tabs">
-          {FILTER_TABS.map((tab) => (
-            <button
-              key={tab}
-              className={`filter-tab ${activeFilter === tab ? 'filter-tab--active' : ''}`}
-              onClick={() => setActiveFilter(tab)}
-              data-testid={`filter-tab-${tab.toLowerCase().replace(/\s+/g, '-')}`}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
+    <div className="claims-section">
+      <div className="filter-tabs">
+        {STATUS_TABS.map((tab) => (
+          <button
+            key={tab}
+            className={'filter-tab' + (filterStatus === tab ? ' active' : '')}
+            onClick={() => onFilterChange(tab)}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
+      <div className="search-wrapper">
         <input
           type="text"
           className="search-input"
           placeholder="Search by name or Claim ID..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          data-testid="search-input"
+          value={searchQuery}
+          onChange={(e) => onSearchChange(e.target.value)}
         />
       </div>
 
-      <div className="claims-table-wrapper">
-        <table className="claims-table" data-testid="claims-table">
+      {claims.length === 0 ? (
+        <div className="no-claims">No claims found matching your criteria.</div>
+      ) : (
+        <table className="claims-table">
           <thead>
             <tr>
               <th>Claim ID</th>
@@ -85,49 +57,34 @@ export default function ClaimsList({ claims, onViewClaim }) {
             </tr>
           </thead>
           <tbody>
-            {filteredClaims.length === 0 ? (
-              <tr>
-                <td colSpan="7" className="claims-table__empty">
-                  No claims found matching your criteria.
+            {claims.map((claim) => (
+              <tr key={claim.id} onClick={() => onSelectClaim(claim.id)}>
+                <td className="claim-id">{claim.id}</td>
+                <td>{claim.claimantName}</td>
+                <td>{claim.type}</td>
+                <td>{claim.dateFiled}</td>
+                <td className="amount">{formatCurrency(claim.amount)}</td>
+                <td>
+                  <span className={getStatusClass(claim.status)}>{claim.status}</span>
+                </td>
+                <td>
+                  <button
+                    className="btn-view"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelectClaim(claim.id);
+                    }}
+                  >
+                    View
+                  </button>
                 </td>
               </tr>
-            ) : (
-              filteredClaims.map((claim) => (
-                <tr
-                  key={claim.id}
-                  onClick={() => onViewClaim(claim.id)}
-                  data-testid={`claim-row-${claim.id}`}
-                >
-                  <td>{claim.id}</td>
-                  <td>{claim.claimantName}</td>
-                  <td>{claim.type}</td>
-                  <td>{claim.dateFiled}</td>
-                  <td>{formatCurrency(claim.amount)}</td>
-                  <td>
-                    <span className={`status-badge status-badge--${getStatusClass(claim.status)}`}>
-                      {claim.status}
-                    </span>
-                  </td>
-                  <td>
-                    <button
-                      className="btn-view"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onViewClaim(claim.id);
-                      }}
-                      data-testid={`view-btn-${claim.id}`}
-                    >
-                      View
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
+            ))}
           </tbody>
         </table>
-      </div>
+      )}
     </div>
   );
 }
 
-export { FILTER_TABS, getStatusClass };
+export default ClaimsList;
