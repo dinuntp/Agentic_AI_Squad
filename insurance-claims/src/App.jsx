@@ -17,13 +17,13 @@ const SEED_DATA = [
     type: 'Auto',
     incidentDate: '2026-05-10',
     amount: 4200,
-    description: 'Rear-end collision at intersection resulting in bumper and trunk damage. Police report filed at the scene.',
+    description: 'Rear-end collision at intersection causing significant bumper and trunk damage to my sedan.',
     status: 'Approved',
     dateFiled: '2026-05-10',
     history: [
       { status: 'Submitted', timestamp: '2026-05-10T09:00:00.000Z' },
       { status: 'Under Review', timestamp: '2026-05-12T14:30:00.000Z' },
-      { status: 'Approved', timestamp: '2026-05-15T10:15:00.000Z' },
+      { status: 'Approved', timestamp: '2026-05-15T10:00:00.000Z' },
     ],
   },
   {
@@ -34,12 +34,12 @@ const SEED_DATA = [
     type: 'Health',
     incidentDate: '2026-05-18',
     amount: 12800,
-    description: 'Emergency room visit due to severe allergic reaction requiring overnight stay and multiple treatments.',
+    description: 'Emergency room visit and subsequent surgery for appendicitis requiring three day hospital stay.',
     status: 'Under Review',
     dateFiled: '2026-05-18',
     history: [
       { status: 'Submitted', timestamp: '2026-05-18T11:00:00.000Z' },
-      { status: 'Under Review', timestamp: '2026-05-20T09:45:00.000Z' },
+      { status: 'Under Review', timestamp: '2026-05-20T09:15:00.000Z' },
     ],
   },
   {
@@ -50,7 +50,7 @@ const SEED_DATA = [
     type: 'Property',
     incidentDate: '2026-05-25',
     amount: 31500,
-    description: 'Storm damage to roof and siding of residential property. Multiple areas of water intrusion identified.',
+    description: 'Severe storm damage to roof and siding of primary residence requiring full replacement of roofing materials.',
     status: 'Submitted',
     dateFiled: '2026-05-25',
     history: [
@@ -65,13 +65,13 @@ const SEED_DATA = [
     type: 'Life',
     incidentDate: '2026-04-30',
     amount: 150000,
-    description: 'Life insurance claim filed for policy holder. All required documentation and certificates have been submitted.',
+    description: 'Life insurance claim filed for policyholder benefit payout following documented qualifying event.',
     status: 'Rejected',
     dateFiled: '2026-04-30',
     history: [
       { status: 'Submitted', timestamp: '2026-04-30T10:00:00.000Z' },
-      { status: 'Under Review', timestamp: '2026-05-02T13:20:00.000Z' },
-      { status: 'Rejected', timestamp: '2026-05-10T16:00:00.000Z' },
+      { status: 'Under Review', timestamp: '2026-05-02T13:00:00.000Z' },
+      { status: 'Rejected', timestamp: '2026-05-08T16:45:00.000Z' },
     ],
   },
   {
@@ -82,11 +82,11 @@ const SEED_DATA = [
     type: 'Auto',
     incidentDate: '2026-06-01',
     amount: 7600,
-    description: 'Side-swipe accident in parking garage causing significant door and panel damage on driver side of vehicle.',
+    description: 'Side-impact collision in parking lot resulting in driver-side door and panel damage to vehicle.',
     status: 'Submitted',
     dateFiled: '2026-06-01',
     history: [
-      { status: 'Submitted', timestamp: '2026-06-01T15:45:00.000Z' },
+      { status: 'Submitted', timestamp: '2026-06-01T14:20:00.000Z' },
     ],
   },
   {
@@ -97,11 +97,11 @@ const SEED_DATA = [
     type: 'Health',
     incidentDate: '2026-06-05',
     amount: 3400,
-    description: 'Outpatient surgical procedure for knee injury sustained during recreational activities. Physical therapy included.',
+    description: 'Outpatient diagnostic imaging and specialist consultation for persistent lower back injury.',
     status: 'Under Review',
     dateFiled: '2026-06-05',
     history: [
-      { status: 'Submitted', timestamp: '2026-06-05T07:15:00.000Z' },
+      { status: 'Submitted', timestamp: '2026-06-05T09:45:00.000Z' },
       { status: 'Under Review', timestamp: '2026-06-07T11:30:00.000Z' },
     ],
   },
@@ -126,11 +126,9 @@ function saveClaims(claims) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(claims));
 }
 
-export { STORAGE_KEY, SEEDED_KEY, SEED_DATA, loadClaims, saveClaims };
-
 export default function App() {
   const [claims, setClaims] = useState(() => loadClaims());
-  const [view, setView] = useState('dashboard'); // 'dashboard' | 'new-claim' | 'claim-detail'
+  const [activeView, setActiveView] = useState('dashboard');
   const [selectedClaimId, setSelectedClaimId] = useState(null);
 
   useEffect(() => {
@@ -138,22 +136,22 @@ export default function App() {
   }, [claims]);
 
   const handleNewClaim = useCallback(() => {
-    setView('new-claim');
+    setActiveView('new-claim');
   }, []);
 
   const handleViewClaim = useCallback((claimId) => {
     setSelectedClaimId(claimId);
-    setView('claim-detail');
+    setActiveView('claim-detail');
   }, []);
 
   const handleBackToDashboard = useCallback(() => {
     setSelectedClaimId(null);
-    setView('dashboard');
+    setActiveView('dashboard');
   }, []);
 
   const handleSubmitClaim = useCallback((newClaim) => {
     setClaims((prev) => [...prev, newClaim]);
-    setView('dashboard');
+    setActiveView('dashboard');
   }, []);
 
   const handleUpdateClaim = useCallback((updatedClaim) => {
@@ -165,34 +163,32 @@ export default function App() {
   const selectedClaim = claims.find((c) => c.id === selectedClaimId) || null;
 
   return (
-    <>
-      <Header onNewClaim={handleNewClaim} showNewClaim={view === 'dashboard'} />
+    <div className="app">
+      <Header onNewClaim={handleNewClaim} />
       <main className="main-content">
-        {view === 'dashboard' && (
-          <div className="view-enter">
+        {activeView === 'dashboard' && (
+          <>
             <SummaryCards claims={claims} />
             <ClaimsList claims={claims} onViewClaim={handleViewClaim} />
-          </div>
+          </>
         )}
-        {view === 'new-claim' && (
-          <div className="view-enter">
-            <NewClaimForm
-              onSubmit={handleSubmitClaim}
-              onCancel={handleBackToDashboard}
-              existingIds={claims.map((c) => c.id)}
-            />
-          </div>
+        {activeView === 'new-claim' && (
+          <NewClaimForm
+            onSubmit={handleSubmitClaim}
+            onCancel={handleBackToDashboard}
+            existingIds={claims.map((c) => c.id)}
+          />
         )}
-        {view === 'claim-detail' && selectedClaim && (
-          <div className="view-enter">
-            <ClaimDetail
-              claim={selectedClaim}
-              onBack={handleBackToDashboard}
-              onUpdateClaim={handleUpdateClaim}
-            />
-          </div>
+        {activeView === 'claim-detail' && selectedClaim && (
+          <ClaimDetail
+            claim={selectedClaim}
+            onBack={handleBackToDashboard}
+            onUpdateClaim={handleUpdateClaim}
+          />
         )}
       </main>
-    </>
+    </div>
   );
 }
+
+export { STORAGE_KEY, SEEDED_KEY, SEED_DATA, loadClaims, saveClaims };
