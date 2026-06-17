@@ -1,46 +1,48 @@
 import React from 'react';
 
-function getStatusClass(status) {
-  const map = {
-    'Submitted': 'submitted',
-    'Under Review': 'under-review',
-    'Approved': 'approved',
-    'Rejected': 'rejected',
-  };
-  return map[status] || 'submitted';
-}
+function ClaimDetail({ claim, onStatusChange, onBack }) {
+  if (!claim) {
+    return (
+      <div className="detail-container">
+        <button className="back-btn" onClick={onBack}>← Back to Dashboard</button>
+        <p>Claim not found.</p>
+      </div>
+    );
+  }
 
-function formatCurrency(amount) {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
-
-function formatTimestamp(isoString) {
-  const date = new Date(isoString);
-  return date.toLocaleString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
-
-export default function ClaimDetail({ claim, onBack, onUpdateClaim }) {
-  const handleStatusChange = (newStatus) => {
-    const updatedClaim = {
-      ...claim,
-      status: newStatus,
-      history: [
-        ...claim.history,
-        { status: newStatus, timestamp: new Date().toISOString() },
-      ],
+  const getStatusClass = (status) => {
+    const map = {
+      'Submitted': 'badge-submitted',
+      'Under Review': 'badge-under-review',
+      'Approved': 'badge-approved',
+      'Rejected': 'badge-rejected'
     };
-    onUpdateClaim(updatedClaim);
+    return 'badge ' + (map[status] || '');
+  };
+
+  const getTimelineStatusClass = (status) => {
+    const map = {
+      'Submitted': 'status-submitted',
+      'Under Review': 'status-under-review',
+      'Approved': 'status-approved',
+      'Rejected': 'status-rejected'
+    };
+    return 'timeline-item ' + (map[status] || '');
+  };
+
+  const formatCurrency = (amount) => {
+    return '$' + amount.toLocaleString();
+  };
+
+  const formatDate = (isoString) => {
+    return new Date(isoString).toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
   };
 
   const renderWorkflowActions = () => {
@@ -49,9 +51,8 @@ export default function ClaimDetail({ claim, onBack, onUpdateClaim }) {
         return (
           <div className="workflow-actions">
             <button
-              className="btn-workflow btn-workflow--review"
-              onClick={() => handleStatusChange('Under Review')}
-              data-testid="btn-under-review"
+              className="btn-workflow btn-review"
+              onClick={() => onStatusChange(claim.id, 'Under Review')}
             >
               Mark Under Review
             </button>
@@ -61,16 +62,14 @@ export default function ClaimDetail({ claim, onBack, onUpdateClaim }) {
         return (
           <div className="workflow-actions">
             <button
-              className="btn-workflow btn-workflow--approve"
-              onClick={() => handleStatusChange('Approved')}
-              data-testid="btn-approve"
+              className="btn-workflow btn-approve"
+              onClick={() => onStatusChange(claim.id, 'Approved')}
             >
               Approve Claim
             </button>
             <button
-              className="btn-workflow btn-workflow--reject"
-              onClick={() => handleStatusChange('Rejected')}
-              data-testid="btn-reject"
+              className="btn-workflow btn-reject"
+              onClick={() => onStatusChange(claim.id, 'Rejected')}
             >
               Reject Claim
             </button>
@@ -78,14 +77,14 @@ export default function ClaimDetail({ claim, onBack, onUpdateClaim }) {
         );
       case 'Approved':
         return (
-          <div className="workflow-final workflow-final--approved" data-testid="final-approved">
+          <div className="workflow-final final-approved">
             ✓ This claim has been approved
           </div>
         );
       case 'Rejected':
         return (
-          <div className="workflow-final workflow-final--rejected" data-testid="final-rejected">
-            ✕ This claim has been rejected
+          <div className="workflow-final final-rejected">
+            ✗ This claim has been rejected
           </div>
         );
       default:
@@ -94,107 +93,80 @@ export default function ClaimDetail({ claim, onBack, onUpdateClaim }) {
   };
 
   return (
-    <div className="detail-container" data-testid="claim-detail">
-      <button className="btn-back" onClick={onBack} data-testid="btn-back">
-        ← Back to Dashboard
-      </button>
+    <div className="detail-container">
+      <button className="back-btn" onClick={onBack}>← Back to Dashboard</button>
 
       <div className="detail-header">
-        <div>
-          <div className="detail-header__id" data-testid="detail-claim-id">
-            {claim.id}
-          </div>
-          <div className="detail-header__date">
-            Filed on {claim.dateFiled}
-          </div>
-        </div>
-        <span
-          className={`status-badge status-badge--${getStatusClass(claim.status)}`}
-          data-testid="detail-status-badge"
-        >
-          {claim.status}
-        </span>
+        <h2>{claim.id}</h2>
+        <span className={getStatusClass(claim.status)}>{claim.status}</span>
+        <span className="filed-date">Filed on {claim.dateFiled}</span>
       </div>
 
-      <div className="detail-body">
-        {/* Left Column — Claim Information */}
-        <div className="detail-info" data-testid="detail-info">
-          <h3 className="detail-info__title">Claim Information</h3>
+      <div className="detail-grid">
+        {/* Left column — Claim Information */}
+        <div className="detail-card">
+          <h3>Claim Information</h3>
 
-          <div className="detail-field">
-            <span className="detail-field__label">Claimant Name</span>
-            <span className="detail-field__value" data-testid="detail-claimantName">
-              {claim.claimantName}
-            </span>
+          <div className="field-group">
+            <div className="field-label">Claimant Name</div>
+            <div className="field-value">{claim.claimantName}</div>
           </div>
 
-          <div className="detail-field">
-            <span className="detail-field__label">Email Address</span>
-            <span className="detail-field__value" data-testid="detail-email">
-              {claim.email}
-            </span>
+          <div className="field-group">
+            <div className="field-label">Email Address</div>
+            <div className="field-value">{claim.email}</div>
           </div>
 
-          <div className="detail-field">
-            <span className="detail-field__label">Phone Number</span>
-            <span className="detail-field__value" data-testid="detail-phone">
-              {claim.phone}
-            </span>
+          <div className="field-group">
+            <div className="field-label">Phone Number</div>
+            <div className="field-value">{claim.phone}</div>
           </div>
 
-          <div className="detail-field">
-            <span className="detail-field__label">Claim Type</span>
-            <span className="detail-field__value" data-testid="detail-type">
-              {claim.type}
-            </span>
+          <div className="field-group">
+            <div className="field-label">Claim Type</div>
+            <div className="field-value">{claim.type}</div>
           </div>
 
-          <div className="detail-field">
-            <span className="detail-field__label">Incident Date</span>
-            <span className="detail-field__value" data-testid="detail-incidentDate">
-              {claim.incidentDate}
-            </span>
+          <div className="field-group">
+            <div className="field-label">Incident Date</div>
+            <div className="field-value">{claim.incidentDate}</div>
           </div>
 
-          <div className="detail-field">
-            <span className="detail-field__label">Claim Amount</span>
-            <span className="detail-field__value" data-testid="detail-amount">
-              {formatCurrency(claim.amount)}
-            </span>
+          <div className="field-group">
+            <div className="field-label">Claim Amount</div>
+            <div className="field-value amount">{formatCurrency(claim.amount)}</div>
           </div>
 
-          <div className="detail-field">
-            <span className="detail-field__label">Description</span>
-            <span className="detail-field__value" data-testid="detail-description">
-              {claim.description}
-            </span>
+          <div className="field-group">
+            <div className="field-label">Description</div>
+            <div className="field-value">{claim.description}</div>
           </div>
         </div>
 
-        {/* Right Column — Status Workflow & History */}
-        <div className="workflow-panel" data-testid="workflow-panel">
-          <h3 className="workflow-panel__title">Status Workflow</h3>
-
-          <div className="workflow-current">
-            <span className="workflow-current__label">Current Status:</span>
-            <span className={`status-badge status-badge--${getStatusClass(claim.status)}`}>
-              {claim.status}
-            </span>
+        {/* Right column — Workflow + Timeline */}
+        <div>
+          <div className="detail-card">
+            <h3>Status Workflow</h3>
+            <div className="workflow-panel">
+              <h4>Current Status</h4>
+              <div className="workflow-current">
+                <span>Status:</span>
+                <span className={getStatusClass(claim.status)}>{claim.status}</span>
+              </div>
+              {renderWorkflowActions()}
+            </div>
           </div>
 
-          {renderWorkflowActions()}
-
-          <div className="timeline__title">Status History</div>
-          <div className="timeline" data-testid="status-timeline">
-            {claim.history.map((entry, index) => (
-              <div className="timeline-item" key={index} data-testid={`timeline-item-${index}`}>
-                <div className={`timeline-item__dot timeline-item__dot--${getStatusClass(entry.status)}`} />
-                <div className="timeline-item__status">{entry.status}</div>
-                <div className="timeline-item__time">
-                  {formatTimestamp(entry.timestamp)}
+          <div className="detail-card" style={{ marginTop: '24px' }}>
+            <h3>Status History</h3>
+            <div className="timeline">
+              {claim.history.map((entry, index) => (
+                <div key={index} className={getTimelineStatusClass(entry.status)}>
+                  <div className="timeline-status">{entry.status}</div>
+                  <div className="timeline-date">{formatDate(entry.timestamp)}</div>
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>
@@ -202,4 +174,4 @@ export default function ClaimDetail({ claim, onBack, onUpdateClaim }) {
   );
 }
 
-export { getStatusClass, formatCurrency, formatTimestamp };
+export default ClaimDetail;
