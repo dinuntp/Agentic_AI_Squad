@@ -52,7 +52,7 @@ export const getUsage = (projectId) => req('GET', '/usage' + (projectId ? `?proj
 // ─── Single-agent SSE run ─────────────────────────────────────────────────────
 
 export function runAgent(projectId, agentId, storyKey, previousContext, callbacks) {
-  const { onToken, onComplete, onError, onLog } = callbacks;
+  const { onToken, onComplete, onError, onLog, onPrCreated } = callbacks;
   const controller = new AbortController();
 
   fetch(`${BASE}/projects/${projectId}/run-agent`, {
@@ -84,6 +84,7 @@ export function runAgent(projectId, agentId, storyKey, previousContext, callback
               if (currentEvent === 'pipeline_log') onLog?.(data.message);
               if (currentEvent === 'complete')     onComplete?.(data);
               if (currentEvent === 'error')        onError?.(data);
+              if (currentEvent === 'pr_created')   onPrCreated?.(data);
             } catch {}
             currentEvent = '';
           }
@@ -104,7 +105,7 @@ export function runAgent(projectId, agentId, storyKey, previousContext, callback
 // ─── Full pipeline SSE run ────────────────────────────────────────────────────
 
 export function runPipeline(projectId, storyKey, callbacks) {
-  const { onStart, onLog, onStepStart, onStepToken, onStepComplete, onStepError, onComplete, onError } = callbacks;
+  const { onStart, onLog, onStepStart, onStepToken, onStepComplete, onStepError, onComplete, onError, onPrCreated } = callbacks;
 
   fetch(`${BASE}/projects/${projectId}/run`, {
     method: 'POST',
@@ -138,6 +139,7 @@ export function runPipeline(projectId, storyKey, callbacks) {
               if (ev === 'step_error')     onStepError?.(data);
               if (ev === 'run_complete' || ev === 'pipeline_complete') onComplete?.(data);
               if (ev === 'run_error')      onError?.(data);
+              if (ev === 'pr_created')     onPrCreated?.(data);
             } catch {}
             currentEvent = '';
           }
@@ -148,3 +150,6 @@ export function runPipeline(projectId, storyKey, callbacks) {
     read();
   }).catch(err => onError?.({ error: err.message }));
 }
+
+// Alias used by WorkflowRunner
+export const startRun = runPipeline;

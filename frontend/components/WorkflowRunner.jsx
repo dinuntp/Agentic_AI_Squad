@@ -16,6 +16,7 @@ export default function WorkflowRunner({ project, onRunComplete }) {
   const [expandedSteps, setExpandedSteps] = useState({});
   const [finalError, setFinalError] = useState('');
   const [storyError, setStoryError] = useState('');
+  const [prInfo, setPrInfo] = useState(null);
   const logsRef = useRef(null);
 
   const sortedAgents = [...(project.agents || [])].sort((a, b) => a.order - b.order);
@@ -61,6 +62,7 @@ export default function WorkflowRunner({ project, onRunComplete }) {
     setPhase('running');
     setRunning(true);
     setFinalError('');
+    setPrInfo(null);
     setStepTokens({});
     setExpandedSteps({});
     setSteps(sortedAgents.map(a => ({
@@ -126,7 +128,11 @@ export default function WorkflowRunner({ project, onRunComplete }) {
         setPhase('error');
         setRunning(false);
         loadRuns(project.id);
-      }
+      },
+      onPrCreated: (data) => {
+        setPrInfo(data);
+        addLog(`Pull Request #${data.number} created: ${data.url}`);
+      },
     });
   }
 
@@ -294,6 +300,23 @@ export default function WorkflowRunner({ project, onRunComplete }) {
                   {phase === 'done' && (
                     <div style={{ marginTop: 12, padding: '10px 12px', background: 'var(--success-bg)', borderRadius: 'var(--radius)', border: '1px solid var(--success-border)', color: 'var(--success)', fontSize: 12, fontWeight: 600 }}>
                       ✓ Pipeline completed successfully!
+                    </div>
+                  )}
+
+                  {prInfo && (
+                    <div style={{ marginTop: 12, padding: '10px 12px', background: '#EFF6FF', borderRadius: 'var(--radius)', border: '1px solid #BFDBFE' }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#1D4ED8', marginBottom: 4 }}>
+                        🔀 PR #{prInfo.number} Created
+                      </div>
+                      <div style={{ fontSize: 11, color: '#3B82F6', marginBottom: 6 }}>{prInfo.title}</div>
+                      <a
+                        href={prInfo.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{ fontSize: 11, color: '#2563EB', fontWeight: 600 }}
+                      >
+                        View on GitHub →
+                      </a>
                     </div>
                   )}
 

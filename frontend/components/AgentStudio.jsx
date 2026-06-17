@@ -231,6 +231,7 @@ export default function AgentStudio() {
   const [allDone, setAllDone] = useState(false);
   const [globalError, setGlobalError] = useState(null);
   const [executionLogs, setExecutionLogs] = useState([]);
+  const [prInfo, setPrInfo] = useState(null);
   const abortRef = useRef(null);
   const logsEndRef = useRef(null);
 
@@ -253,6 +254,7 @@ export default function AgentStudio() {
     setStepStatuses(prev => ({ ...prev, [agent.id]: 'running' }));
     setOutputs(prev => ({ ...prev, [agent.id]: '' }));
     setExecutionLogs([]);
+    setPrInfo(null);
 
     abortRef.current = runAgent(project.id, agent.id, story?.key || story?.summary || '', previousContext, {
       onToken: (token) => {
@@ -277,6 +279,10 @@ export default function AgentStudio() {
         setStepStatuses(prev => ({ ...prev, [agent.id]: 'failed' }));
         setGlobalError(data.error || 'Agent execution failed');
       },
+      onPrCreated: (data) => {
+        setPrInfo(data);
+        setExecutionLogs(prev => [...prev, `✓ Pull Request created: ${data.url}`]);
+      },
     });
   }
 
@@ -295,6 +301,7 @@ export default function AgentStudio() {
     setAllDone(false);
     setGlobalError(null);
     setExecutionLogs([]);
+    setPrInfo(null);
   }
 
   if (!project) {
@@ -434,6 +441,36 @@ export default function AgentStudio() {
           }}>
             <span style={{ fontSize: 18 }}>✓</span>
             All agents completed successfully! The pipeline run is complete.
+          </div>
+        )}
+
+        {/* PR Created Banner */}
+        {prInfo && (
+          <div style={{
+            marginBottom: 16, padding: '14px 20px', borderRadius: 8,
+            background: '#EFF6FF', border: '1px solid #BFDBFE',
+            display: 'flex', alignItems: 'center', gap: 12,
+          }}>
+            <span style={{ fontSize: 22 }}>🔀</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, color: '#1D4ED8', fontSize: 14 }}>
+                Pull Request #{prInfo.number} Created
+              </div>
+              <div style={{ fontSize: 12, color: '#3B82F6', marginTop: 2 }}>{prInfo.title}</div>
+              <div style={{ fontSize: 11, color: '#6B7280', marginTop: 2 }}>Branch: <code style={{ background: '#DBEAFE', padding: '1px 5px', borderRadius: 4 }}>{prInfo.branch}</code></div>
+            </div>
+            <a
+              href={prInfo.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                padding: '7px 16px', borderRadius: 6, fontSize: 13, fontWeight: 600,
+                background: '#2563EB', color: '#fff', textDecoration: 'none',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              View PR →
+            </a>
           </div>
         )}
 
