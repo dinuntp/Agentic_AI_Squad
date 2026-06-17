@@ -257,7 +257,8 @@ export default function AgentStudio() {
     setStepStatuses(prev => ({ ...prev, [agent.id]: 'running' }));
     setOutputs(prev => ({ ...prev, [agent.id]: '' }));
     setExecutionLogs([]);
-    setPrInfo(null);
+    // Only clear PR info when re-running the developer agent itself, not when continuing to next agents
+    if (agent.type === 'developer-agent') setPrInfo(null);
 
     abortRef.current = runAgent(project.id, agent.id, story?.key || story?.summary || '', previousContext, {
       onToken: (token) => {
@@ -434,20 +435,7 @@ export default function AgentStudio() {
           />
         )}
 
-        {/* All Done Banner */}
-        {allDone && (
-          <div style={{
-            marginBottom: 16, padding: '14px 20px', borderRadius: 8,
-            background: 'var(--green-bg)', border: '1px solid var(--green-border)',
-            color: 'var(--green)', fontWeight: 600,
-            display: 'flex', alignItems: 'center', gap: 10,
-          }}>
-            <span style={{ fontSize: 18 }}>✓</span>
-            All agents completed successfully! The pipeline run is complete.
-          </div>
-        )}
-
-        {/* PR Created Banner */}
+        {/* PR Created Banner — shown as soon as Developer Agent creates a PR, persists until Reset */}
         {prInfo && (
           <div style={{
             marginBottom: 16, padding: '14px 20px', borderRadius: 8,
@@ -460,7 +448,9 @@ export default function AgentStudio() {
                 Pull Request #{prInfo.number} Created
               </div>
               <div style={{ fontSize: 12, color: '#3B82F6', marginTop: 2 }}>{prInfo.title}</div>
-              <div style={{ fontSize: 11, color: '#6B7280', marginTop: 2 }}>Branch: <code style={{ background: '#DBEAFE', padding: '1px 5px', borderRadius: 4 }}>{prInfo.branch}</code></div>
+              <div style={{ fontSize: 11, color: '#6B7280', marginTop: 2 }}>
+                Branch: <code style={{ background: '#DBEAFE', padding: '1px 5px', borderRadius: 4 }}>{prInfo.branch}</code>
+              </div>
             </div>
             <a
               href={prInfo.url}
@@ -474,6 +464,19 @@ export default function AgentStudio() {
             >
               View PR →
             </a>
+          </div>
+        )}
+
+        {/* All Done Banner */}
+        {allDone && (
+          <div style={{
+            marginBottom: 16, padding: '14px 20px', borderRadius: 8,
+            background: 'var(--green-bg)', border: '1px solid var(--green-border)',
+            color: 'var(--green)', fontWeight: 600,
+            display: 'flex', alignItems: 'center', gap: 10,
+          }}>
+            <span style={{ fontSize: 18 }}>✓</span>
+            All agents completed successfully! The pipeline run is complete.
           </div>
         )}
 
