@@ -1,13 +1,13 @@
 import React, { useState, useMemo } from 'react';
 
-const FILTER_OPTIONS = ['All', 'Submitted', 'Under Review', 'Approved', 'Rejected'];
+const FILTER_TABS = ['All', 'Submitted', 'Under Review', 'Approved', 'Rejected'];
 
 function getStatusClass(status) {
   const map = {
-    Submitted: 'submitted',
+    'Submitted': 'submitted',
     'Under Review': 'under-review',
-    Approved: 'approved',
-    Rejected: 'rejected',
+    'Approved': 'approved',
+    'Rejected': 'rejected',
   };
   return map[status] || 'submitted';
 }
@@ -21,15 +21,6 @@ function formatCurrency(amount) {
   }).format(amount);
 }
 
-function formatDate(dateStr) {
-  const date = new Date(dateStr + 'T00:00:00');
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-}
-
 export default function ClaimsList({ claims, onViewClaim }) {
   const [activeFilter, setActiveFilter] = useState('All');
   const [searchTerm, setSearchTerm] = useState('');
@@ -37,12 +28,12 @@ export default function ClaimsList({ claims, onViewClaim }) {
   const filteredClaims = useMemo(() => {
     let result = claims;
 
-    // Filter by status
+    // Apply status filter
     if (activeFilter !== 'All') {
       result = result.filter((c) => c.status === activeFilter);
     }
 
-    // Filter by search term (AND logic with status filter)
+    // Apply search filter (AND logic with status filter)
     if (searchTerm.trim()) {
       const term = searchTerm.trim().toLowerCase();
       result = result.filter(
@@ -56,19 +47,17 @@ export default function ClaimsList({ claims, onViewClaim }) {
   }, [claims, activeFilter, searchTerm]);
 
   return (
-    <div className="claims-section" data-testid="claims-section">
-      <div className="claims-toolbar" data-testid="claims-toolbar">
+    <div data-testid="claims-list">
+      <div className="filter-bar">
         <div className="filter-tabs" data-testid="filter-tabs">
-          {FILTER_OPTIONS.map((option) => (
+          {FILTER_TABS.map((tab) => (
             <button
-              key={option}
-              className={`filter-tab ${
-                activeFilter === option ? 'filter-tab--active' : ''
-              }`}
-              onClick={() => setActiveFilter(option)}
-              data-testid={`filter-${option.toLowerCase().replace(/\s+/g, '-')}`}
+              key={tab}
+              className={`filter-tab ${activeFilter === tab ? 'filter-tab--active' : ''}`}
+              onClick={() => setActiveFilter(tab)}
+              data-testid={`filter-tab-${tab.toLowerCase().replace(/\s+/g, '-')}`}
             >
-              {option}
+              {tab}
             </button>
           ))}
         </div>
@@ -82,12 +71,7 @@ export default function ClaimsList({ claims, onViewClaim }) {
         />
       </div>
 
-      {filteredClaims.length === 0 ? (
-        <div className="empty-state" data-testid="empty-state">
-          <div className="empty-state__icon">📋</div>
-          <p className="empty-state__text">No claims found matching your criteria.</p>
-        </div>
-      ) : (
+      <div className="claims-table-wrapper">
         <table className="claims-table" data-testid="claims-table">
           <thead>
             <tr>
@@ -101,45 +85,49 @@ export default function ClaimsList({ claims, onViewClaim }) {
             </tr>
           </thead>
           <tbody>
-            {filteredClaims.map((claim) => (
-              <tr
-                key={claim.id}
-                onClick={() => onViewClaim(claim.id)}
-                data-testid={`claim-row-${claim.id}`}
-              >
-                <td className="claim-id-cell">{claim.id}</td>
-                <td>{claim.claimantName}</td>
-                <td>{claim.type}</td>
-                <td>{formatDate(claim.dateFiled)}</td>
-                <td className="amount-cell">{formatCurrency(claim.amount)}</td>
-                <td>
-                  <span
-                    className={`status-badge status-badge--${getStatusClass(
-                      claim.status
-                    )}`}
-                  >
-                    {claim.status}
-                  </span>
-                </td>
-                <td>
-                  <button
-                    className="btn btn--ghost"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onViewClaim(claim.id);
-                    }}
-                    data-testid={`view-btn-${claim.id}`}
-                  >
-                    View
-                  </button>
+            {filteredClaims.length === 0 ? (
+              <tr>
+                <td colSpan="7" className="claims-table__empty">
+                  No claims found matching your criteria.
                 </td>
               </tr>
-            ))}
+            ) : (
+              filteredClaims.map((claim) => (
+                <tr
+                  key={claim.id}
+                  onClick={() => onViewClaim(claim.id)}
+                  data-testid={`claim-row-${claim.id}`}
+                >
+                  <td>{claim.id}</td>
+                  <td>{claim.claimantName}</td>
+                  <td>{claim.type}</td>
+                  <td>{claim.dateFiled}</td>
+                  <td>{formatCurrency(claim.amount)}</td>
+                  <td>
+                    <span className={`status-badge status-badge--${getStatusClass(claim.status)}`}>
+                      {claim.status}
+                    </span>
+                  </td>
+                  <td>
+                    <button
+                      className="btn-view"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onViewClaim(claim.id);
+                      }}
+                      data-testid={`view-btn-${claim.id}`}
+                    >
+                      View
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
-      )}
+      </div>
     </div>
   );
 }
 
-export { FILTER_OPTIONS, getStatusClass, formatCurrency, formatDate };
+export { FILTER_TABS, getStatusClass };
