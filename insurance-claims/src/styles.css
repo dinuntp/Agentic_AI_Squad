@@ -1,0 +1,817 @@
+/* ===================================================================
+   Insurance Claim Management — Complete Stylesheet
+   =================================================================== */
+
+/* === Reset & Base === */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+    Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: #f4f6f9;
+  color: #1e293b;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* === Fade-in Animation === */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.25s ease-out;
+}
+
+/* === App Root === */
+.app {
+  min-height: 100vh;
+}
+
+/* === Header === */
+.header {
+  background: #1a2332;
+  padding: 16px 32px;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.header-title {
+  color: #ffffff;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+  cursor: pointer;
+  user-select: none;
+  transition: opacity 0.2s;
+}
+
+.header-title:hover {
+  opacity: 0.85;
+}
+
+.btn-new-claim {
+  background: #ffffff;
+  color: #2563eb;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.btn-new-claim:hover {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+/* === Main Container === */
+.main-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 24px 32px;
+}
+
+/* === Summary Cards === */
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-bottom: 28px;
+}
+
+.summary-card {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 20px 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-left: 4px solid #e2e8f0;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.summary-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+.summary-card--total {
+  border-left-color: #2563eb;
+}
+
+.summary-card--pending {
+  border-left-color: #f59e0b;
+}
+
+.summary-card--approved {
+  border-left-color: #10b981;
+}
+
+.summary-card--rejected {
+  border-left-color: #ef4444;
+}
+
+.summary-card__label {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-bottom: 4px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.summary-card__value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.summary-card__sub-value {
+  font-size: 0.95rem;
+  color: #10b981;
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+/* === Filter Tabs === */
+.filter-tabs {
+  display: flex;
+  flex-direction: row;
+  gap: 0;
+  border-bottom: 2px solid #e2e8f0;
+  margin-bottom: 16px;
+}
+
+.filter-tab {
+  padding: 10px 20px;
+  cursor: pointer;
+  color: #64748b;
+  border: none;
+  background: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: color 0.2s, border-bottom-color 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-tab:hover {
+  color: #2563eb;
+}
+
+.filter-tab--active {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+  font-weight: 600;
+}
+
+.filter-tab__count {
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  min-width: 22px;
+  text-align: center;
+}
+
+.filter-tab--active .filter-tab__count {
+  background: #dbeafe;
+  color: #2563eb;
+}
+
+/* === Search Input === */
+.search-input {
+  width: 100%;
+  max-width: 380px;
+  padding: 10px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  margin-bottom: 16px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+  color: #1e293b;
+}
+
+.search-input::placeholder {
+  color: #9ca3af;
+}
+
+.search-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+/* === Claims Table === */
+.table-container {
+  background: #ffffff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.claims-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.claims-table thead {
+  background: #f8fafc;
+}
+
+.claims-table th {
+  text-align: left;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: #64748b;
+  letter-spacing: 0.05em;
+  padding: 14px 16px;
+  font-weight: 600;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.claims-table td {
+  padding: 14px 16px;
+  font-size: 0.9rem;
+}
+
+.claims-table__row {
+  cursor: pointer;
+  transition: background 0.15s;
+  border-top: 1px solid #f1f5f9;
+}
+
+.claims-table__row:first-child {
+  border-top: none;
+}
+
+.claims-table__row:hover {
+  background: #f8fafc;
+}
+
+.claim-id-cell {
+  font-weight: 600;
+  color: #2563eb;
+}
+
+.amount-cell {
+  font-weight: 600;
+}
+
+.table-empty {
+  text-align: center;
+  padding: 48px 16px !important;
+  color: #64748b;
+  font-size: 0.95rem;
+}
+
+/* === Status Badges === */
+.status-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.status-badge--sm {
+  padding: 2px 10px;
+  font-size: 0.75rem;
+}
+
+.status-badge--lg {
+  padding: 6px 16px;
+  font-size: 0.9rem;
+}
+
+.status-badge--submitted {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.status-badge--under-review {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.status-badge--approved {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.status-badge--rejected {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+/* === View/Action Button (table) === */
+.btn-view {
+  background: transparent;
+  color: #2563eb;
+  border: 1px solid #2563eb;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s, color 0.2s;
+}
+
+.btn-view:hover {
+  background: #2563eb;
+  color: #ffffff;
+}
+
+/* === New Claim Form === */
+.new-claim-form-card {
+  max-width: 720px;
+  margin: 0 auto;
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 32px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.form-title {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 0 0 24px 0;
+  color: #1e293b;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group--full {
+  grid-column: 1 / -1;
+}
+
+.form-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.form-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+  color: #1e293b;
+  font-family: inherit;
+}
+
+.form-input::placeholder {
+  color: #9ca3af;
+}
+
+.form-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.form-input--error {
+  border-color: #dc2626;
+}
+
+.form-input--error:focus {
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+}
+
+.form-select {
+  appearance: auto;
+  cursor: pointer;
+}
+
+.form-textarea {
+  min-height: 100px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.form-error {
+  color: #dc2626;
+  font-size: 0.8rem;
+  margin-top: 4px;
+  display: block;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.btn-cancel {
+  background: #f1f5f9;
+  color: #374151;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.btn-cancel:hover {
+  background: #e2e8f0;
+}
+
+.btn-submit {
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-submit:hover {
+  background: #1d4ed8;
+}
+
+/* === Claim Detail === */
+.claim-detail {
+  max-width: 1100px;
+}
+
+.btn-back {
+  background: none;
+  border: none;
+  color: #2563eb;
+  cursor: pointer;
+  font-size: 0.95rem;
+  margin-bottom: 16px;
+  padding: 0;
+  font-weight: 500;
+  transition: color 0.2s;
+}
+
+.btn-back:hover {
+  color: #1d4ed8;
+}
+
+.claim-detail__header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.claim-detail__id {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+  color: #1e293b;
+}
+
+.claim-detail__date {
+  color: #64748b;
+  font-size: 0.9rem;
+  margin-left: auto;
+}
+
+.claim-detail__grid {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 24px;
+}
+
+/* === Detail Cards === */
+.detail-card {
+  background: #ffffff;
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.detail-card__title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 20px 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.detail-field {
+  margin-bottom: 16px;
+}
+
+.detail-field:last-child {
+  margin-bottom: 0;
+}
+
+.detail-field__label {
+  display: block;
+  font-size: 0.75rem;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.detail-field__value {
+  display: block;
+  font-size: 0.95rem;
+  color: #1e293b;
+}
+
+.detail-field__value--amount {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #059669;
+}
+
+.detail-field__value--description {
+  line-height: 1.6;
+  color: #374151;
+}
+
+/* === Right Column === */
+.detail-right-column {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* === Workflow Card === */
+.workflow-card {
+  /* inherits .detail-card */
+}
+
+.workflow-current {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.workflow-current__label {
+  font-size: 0.8rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.workflow-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.btn-workflow {
+  width: 100%;
+  padding: 12px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s, transform 0.15s;
+}
+
+.btn-workflow:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.btn-workflow:active {
+  transform: translateY(0);
+}
+
+.btn-workflow--under-review {
+  background: #f59e0b;
+  color: #ffffff;
+}
+
+.btn-workflow--approve {
+  background: #10b981;
+  color: #ffffff;
+}
+
+.btn-workflow--reject {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.workflow-final {
+  text-align: center;
+  padding: 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.workflow-final--approved {
+  background: #d1fae5;
+  color: #059669;
+}
+
+.workflow-final--rejected {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+/* === Timeline === */
+.timeline-card {
+  /* inherits .detail-card */
+}
+
+.timeline {
+  position: relative;
+  padding: 0;
+}
+
+.timeline-item {
+  display: flex;
+  position: relative;
+  padding-left: 28px;
+  margin-bottom: 20px;
+}
+
+.timeline-item--last {
+  margin-bottom: 0;
+}
+
+/* Timeline vertical line */
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 18px;
+  bottom: -22px;
+  width: 2px;
+  background: #e2e8f0;
+}
+
+.timeline-item--last::before {
+  display: none;
+}
+
+/* Timeline dot */
+.timeline-dot {
+  position: absolute;
+  left: 0;
+  top: 4px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #e2e8f0;
+  background: #ffffff;
+  z-index: 1;
+}
+
+.timeline-dot--submitted {
+  border-color: #3b82f6;
+}
+
+.timeline-dot--under-review {
+  border-color: #f59e0b;
+}
+
+.timeline-dot--approved {
+  border-color: #10b981;
+}
+
+.timeline-dot--rejected {
+  border-color: #ef4444;
+}
+
+.timeline-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.timeline-timestamp {
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
+/* === Empty State === */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: #64748b;
+}
+
+.empty-state p {
+  font-size: 1.1rem;
+  margin-bottom: 16px;
+}
+
+.btn-primary {
+  background: #2563eb;
+  color: #ffffff;
+  border: none;
+  padding: 10px 24px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-primary:hover {
+  background: #1d4ed8;
+}
+
+/* === Responsive Adjustments === */
+@media (max-width: 1024px) {
+  .summary-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .claim-detail__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-group--full {
+    grid-column: 1;
+  }
+
+  .header {
+    padding: 12px 16px;
+  }
+
+  .main-container {
+    padding: 16px;
+  }
+
+  .claim-detail__date {
+    margin-left: 0;
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .summary-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .filter-tabs {
+    flex-wrap: wrap;
+  }
+
+  .claims-table {
+    font-size: 0.8rem;
+  }
+
+  .claims-table th,
+  .claims-table td {
+    padding: 10px 8px;
+  }
+}
