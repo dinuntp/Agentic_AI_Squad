@@ -1,16 +1,17 @@
 import React from 'react';
 
-export default function Header({ onNewClaim }) {
+function Header({ onNavigate }) {
   return (
-    <header className="header" data-testid="header">
-      <h1 className="header__title">Insurance Claim Management Dashboard</h1>
+    <header className="header">
+      <h1>Insurance Claim Management Dashboard</h1>
       <button
-        className="header__btn"
-        onClick={onNewClaim}
-        data-testid="new-claim-btn"
+        className="btn-new-claim"
+        onClick={() => onNavigate('newClaim')}
       >
         + New Claim
       </button>
     </header>
   );
 }
+
+export default Header;
